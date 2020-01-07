@@ -28,17 +28,7 @@ jobs:
       - name: Test
         run: make test-runner
 
-      - name: Build
-        run: |
-          export VERSION=$(git describe --always --long --dirty)
-          make build
-
-      - name: Publish
-        env:
-          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
-        run: |
-          export VERSION=$(git describe --always --long --dirty)
-          make publish
+      ## TODO: add compile and deploy stages
 
       - name: Release
         uses: fnkr/github-action-ghr@v1

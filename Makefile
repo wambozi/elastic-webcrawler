@@ -22,17 +22,6 @@ compile:
 	export GOFLAGS="-mod=vendor"
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o ${OUT} -ldflags="-extldflags \"-static\""
 
-.PHONY: build
-build: compile
-	docker build -t wambozi/elastic-webcrawler:${VERSION} .
-
-.PHONY: publish
-publish:
-	docker login --username wambozi --password ${DOCKER_TOKEN}
-	docker tag wambozi/elastic-webcrawler:${VERSION} wambozi/elastic-webcrawler:latest
-	docker push wambozi/elastic-webcrawler:${VERSION}
-	docker push wambozi/elastic-webcrawler:latest
-
 .PHONY: format
 format:
 	@gofmt -w *.go $$(ls -d */ | grep -v /vendor/)
@@ -75,14 +64,11 @@ lint:
 		golint $$file; \
 	done
 
-.PHONY: terraform-deploy
-terraform-deploy:
-	terraform init \
-	terraform get \
-	terraform plan \
-	terraform apply
+.PHONY: sonar
+sonar:
+	gitlab-sonar-scanner -Dsonar.login=${SONAR_USER_TOKEN}
 
-.PHONY: serverless-deploy
-serverless-deploy:
+.PHONY: deploy
+deploy:
 	@export VERSION=${VERSION}
-	serverless deploy --stage="dev"
+	serverless deploy --stage dev

@@ -6,9 +6,9 @@ resources:
 provider:
   name: aws
   runtime: go1.x
-  memorySize: 128
+  memorySize: 1024
   role: ${self:custom.iam_role.${opt:stage, self:provider.stage}}
-  stage: ${opt:stage, 'lle'}
+  stage: ${opt:stage, 'dev'}
   environment: ${self:custom.environment.${opt:stage, self:provider.stage}}
   deployment_bucket:
     name: ${self:custom.deploymentBucket.${opt:stage, self:provider.stage}}
