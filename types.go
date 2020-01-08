@@ -52,8 +52,8 @@ type Secret struct {
 	VersionStages []string   `json:"VersionStages"`
 }
 
-// ElasticsearchCredentials represent the unmarshalled JSON object from SecretsManager
-type ElasticsearchCredentials struct {
+// Credentials represent the unmarshalled JSON object from SecretsManager
+type Credentials struct {
 	Username string `json:"elasticsearch_username"`
 	Password string `json:"elasticsearch_password"`
 	Endpoint string `json:"elasticsearch_endpoint"`
@@ -61,10 +61,11 @@ type ElasticsearchCredentials struct {
 
 // EnvConfig represents all of the environment specific information needed for the application to do its job
 type EnvConfig struct {
-	region     string
-	env        string
-	secretName string
-	profile    *string
+	region              string
+	env                 string
+	elasticsearchSecret string
+	redisSecret         string
+	profile             *string
 }
 
 // Event defines the CloudWatch event

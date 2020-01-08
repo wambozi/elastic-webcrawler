@@ -14,8 +14,8 @@ type RedisOptions struct {
 	Database int
 }
 
-// New returns a new instance of the redis client
-func New(c *RedisOptions) (*redis.Client, error) {
+// CreateRedisClient returns a new instance of the redis client
+func CreateRedisClient(c *RedisOptions) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     c.Host,
 		Password: c.Password,

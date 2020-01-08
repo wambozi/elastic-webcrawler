@@ -15,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	indexName string = "demo"
+)
+
 // entrypoint
 func main() {
 	lambda.Start(Handler)
@@ -26,6 +30,8 @@ func Run(lambdaContext *lambdacontext.LambdaContext, event events.CloudwatchLogs
 		// events        []Event
 		// indexName     string
 		consoleFormat string = "RequestID: %s, Error: %+v"
+		elasticCreds  Credentials
+		redisCreds    Credentials
 	)
 
 	// Create a new AWS Session
@@ -38,25 +44,49 @@ func Run(lambdaContext *lambdacontext.LambdaContext, event events.CloudwatchLogs
 	}
 
 	// Create the request object for SecretsManager using the secretName from the environment
-	s := SecretInput{
+	es := SecretInput{
 		Client: secretsmanager.New(sess),
 		Input: &secretsmanager.GetSecretValueInput{
-			SecretId:     aws.String(envConfig.secretName),
+			SecretId:     aws.String(envConfig.elasticsearchSecret),
+			VersionStage: aws.String("AWSCURRENT"), // VersionStage defaults to AWSCURRENT if unspecified
+		},
+	}
+
+	rs := SecretInput{
+		Client: secretsmanager.New(sess),
+		Input: &secretsmanager.GetSecretValueInput{
+			SecretId:     aws.String(envConfig.redisSecret),
 			VersionStage: aws.String("AWSCURRENT"), // VersionStage defaults to AWSCURRENT if unspecified
 		},
 	}
 
 	// Use the SecretInput and AWS environment to get the credentials used to connect to Elasticsearch
-	elasticCreds, err := GetElasticCreds(s, envConfig.env)
+	elasticCreds, err = GetCredentials(es, envConfig.env, elasticCreds)
 	if err != nil {
 		logger.Error(fmt.Sprintf(consoleFormat, string(lambdaContext.AwsRequestID), err))
 	}
 
-	// We want to ensure we're not dropping log messages going to elasticsearch due to network timeouts
-	// so we're setting the http RoundTripper timeouts to high values to try and avoid that.
-	elasticConfig := GenerateElasticConfig([]string{elasticCreds.Endpoint}, elasticCreds.Username, elasticCreds.Password)
+	redisCreds, err = GetCredentials(rs, envConfig.env, redisCreds)
+	if err != nil {
+		logger.Error(fmt.Sprintf(consoleFormat, string(lambdaContext.AwsRequestID), err))
+	}
 
-	fmt.Println(elasticConfig)
+	elasticConfig := GenerateElasticConfig([]string{elasticCreds.Endpoint}, elasticCreds.Username, elasticCreds.Password)
+	redisConfig := &RedisOptions{
+		Host:     redisCreds.Endpoint,
+		Password: redisCreds.Username,
+		Database: 0,
+	}
+
+	elasticClient, err := CreateElasticClient(elasticConfig)
+	if err != nil {
+		logger.Error(fmt.Sprintf(consoleFormat, string(lambdaContext.AwsRequestID), err))
+	}
+
+	redisClient, err := CreateRedisClient(redisConfig)
+
+	events := Events(logger)
+	crawler(elasticClient, redisClient, events, string(lambdaContext.AwsRequestID), indexName, logger)
 }
 
 // Handler handles the lambda event context, and runs the exec function
@@ -69,9 +99,10 @@ func Handler(ctx context.Context, event events.CloudwatchLogsEvent) {
 	}
 
 	config := EnvConfig{
-		region:     os.Getenv("awsRegion"),
-		env:        os.Getenv("awsEnvironment"),
-		secretName: os.Getenv("secretName"),
+		region:              os.Getenv("REGION"),
+		env:                 os.Getenv("ENVIRONMENT"),
+		elasticsearchSecret: os.Getenv("ELASTICSEARCH_SECRET"),
+		redisSecret:         os.Getenv("REDIS_SECRET"),
 	}
 
 	// Set default region for the AWS config by getting it from environment
