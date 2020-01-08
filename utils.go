@@ -16,14 +16,12 @@ import (
 	"golang.org/x/net/html"
 )
 
-// GetElasticCreds returns the elasticsearch credentials from AWS SecretsManager
-func GetElasticCreds(secret SecretInput, env string) (creds ElasticsearchCredentials, err error) {
-	var elasticCreds ElasticsearchCredentials
-
+// GetCredentials returns the elasticsearch credentials from AWS SecretsManager
+func GetCredentials(secret SecretInput, env string, i Credentials) (creds Credentials, err error) {
 	// get the secret object from SecretsManager
 	result, err := secret.Client.GetSecretValue(secret.Input)
 	if err != nil {
-		return elasticCreds, err
+		return i, err
 	}
 
 	// declare a variable that has the Secret type that can be unmarshalled into
@@ -34,15 +32,15 @@ func GetElasticCreds(secret SecretInput, env string) (creds ElasticsearchCredent
 		sec.Secret = *result.SecretString
 
 		// Unmarshall Secret string
-		err = json.Unmarshal([]byte(sec.Secret), &elasticCreds)
+		err = json.Unmarshal([]byte(sec.Secret), &i)
 		if err != nil {
-			return elasticCreds, err
+			return i, err
 		}
 
-		return elasticCreds, nil
+		return i, nil
 	}
 
-	return elasticCreds, nil
+	return i, nil
 }
 
 // GenerateElasticConfig returns the elasticsearch config given the endpoint(s), username and password
