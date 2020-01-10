@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/go-redis/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
@@ -32,40 +34,41 @@ type Storer interface {
 }
 
 //Persist saves data in a datastore
-func (st *Storage) Persist(someData string) (string, error) {
-	return fmt.Sprintf("I persisted - %s in - %s", someData, st.SomeDatabase), nil
+func (st *Elasticsearch) Persist(someData string) (string, error) {
+	return fmt.Sprintf("I persisted - %s in - %s", someData, st.Cluster), nil
 }
 
 //String provides information about Storage's underlying datastore
-func (st *Storage) String() string {
-	return st.SomeDatabase
+func (st *Elasticsearch) String() string {
+	return st.Cluster
 }
 
-//Storage defines datastore
-type Storage struct {
-	SomeDatabase string
+//Elasticsearch defines datastore
+type Elasticsearch struct {
+	Cluster string
 }
 
 //Server defines storage and a router
 type Server struct {
-	Storage Storer
-	Router  *httprouter.Router
-	Log     *logrus.Entry
+	ElasticClient *elasticsearch.Client
+	RedisClient   *redis.Client
+	Router        *httprouter.Router
+	Log           *logrus.Logger
 }
 
 //NewServer sets up storage, router and routes
-func NewServer(c *conf.Configuration, s *Storage, r *httprouter.Router, log *logrus.Entry) *Server {
-	server := &Server{Storage: s, Router: r, Log: log}
+func NewServer(c *conf.Configuration, ec *elasticsearch.Client, rc *redis.Client, r *httprouter.Router, log *logrus.Logger) *Server {
+	server := &Server{ElasticClient: ec, RedisClient: rc, Router: r, Log: log}
 	server.routes()
 	return server
 }
 
-//NewStorage provides a connection to the application's underlying data store
-func NewStorage(c *conf.StorageConfiguration) (*Storage, error) {
+//NewElasticsearchClient provides a connection to the webcrawler's Elasticsearch cluster
+func NewElasticsearchClient(c *conf.ElasticsearchConfiguration) (*Elasticsearch, error) {
 	//here you would use storage configuration info to create a postgres connection, prepare statements (if needed), etc, and then return *sql.DB.
 	//Returning *storage for illustration purposes only.
-	return &Storage{
-		SomeDatabase: fmt.Sprintf("Successful connection to : %s", c.ConnectionURI),
+	return &Elasticsearch{
+		Cluster: fmt.Sprintf("Successful connection to : %s", c.ConnectionURI),
 	}, nil
 }
 
@@ -101,9 +104,9 @@ func (s *Server) shutdownOnSignal(serv *http.Server, wg *sync.WaitGroup, once *s
 	s.Log.Infof("Received signal : %v. Server shutting down.", sig)
 	ctxShutDown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
-	defer func(cnc context.CancelFunc, wgp *sync.WaitGroup, onceP *sync.Once, errsP chan<- error, logP *logrus.Entry) {
+	defer func(cnc context.CancelFunc, wgp *sync.WaitGroup, onceP *sync.Once, errsP chan<- error, logP *logrus.Logger) {
 		//extra cleanup can be done here (e.g. closing database connection)
-		logP.Infof("Extra cleanup - closing the following connection : %s", s.Storage.String())
+		logP.Infof("Extra cleanup - closing the following connection : %+v", s.ElasticClient)
 
 		cnc()
 
@@ -129,8 +132,6 @@ func closeChannel(once *sync.Once, channel chan<- error) {
 }
 
 func (s *Server) routes() {
-	s.Router.HandlerFunc("GET", "/", s.execDurLog(s.corrIDHeaderLog(s.reqResLog())))
-	s.Router.HandlerFunc("POST", "/split", s.execDurLog(s.corrIDHeaderLog(s.reqResLog())))
-
+	s.Router.HandlerFunc("POST", "/split", s.execDurLog(s.reqResLog(s.handleCrawl())))
 	s.Router.ServeFiles("/docs/*filepath", http.Dir("./pkg/serving/swagger/"))
 }

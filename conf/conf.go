@@ -7,12 +7,18 @@ import (
 
 //Configuration holds configuration values for the application
 type Configuration struct {
-	Server  ServerConfiguration
-	Storage StorageConfiguration
+	Server        ServerConfiguration
+	Elasticsearch ElasticsearchConfiguration
+	Redis         RedisConfiguration
 }
 
-//StorageConfiguration holds configuration values for the data store
-type StorageConfiguration struct {
+//ElasticsearchConfiguration holds configuration values for the Elasticsearch cluster
+type ElasticsearchConfiguration struct {
+	ConnectionURI string
+}
+
+//RedisConfiguration holds configuration values for the data Redis cache
+type RedisConfiguration struct {
 	ConnectionURI string
 }
 
@@ -46,7 +52,7 @@ func Setup(env string) (*Configuration, error) {
 		viper.SetConfigName("prod")
 	}
 
-	//needed when built at ./cmd/gitlab.com/westcreek/information/example-projects/sample-web-service-application-go/
+	//needed when built at ./cmd/github.com/wambozi/elastic-webcrawler/
 	viper.AddConfigPath("../../conf/")
 	//needed when built at project root (E.g. when invoked with 'make build')
 	viper.AddConfigPath("conf/")

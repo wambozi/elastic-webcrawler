@@ -2,13 +2,10 @@ package serving
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,45 +20,10 @@ func (s *Server) execDurLog(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *Server) corrIDHeaderLog(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cID := "Correlation-ID"
-
-		// Use correlation ID if it's in request headers
-		for k, vals := range r.Header {
-			if strings.TrimSpace(strings.ToLower(k)) == strings.ToLower(cID) {
-				s.Log.Data[cID] = strings.TrimSpace(vals[0])
-				h(w, r)
-				return
-			}
-		}
-
-		// Generate correlation ID if not present in request headers
-		genCorrID, err := genCorrelationID()
-		if err != nil {
-			s.Log.Errorf("Could not generate correlation ID for request :  %+v.  Error is : %s. Continuing.", *r, err)
-		}
-
-		s.Log.Data[cID] = genCorrID
-		r.Header.Add(cID, genCorrID)
-		h(w, r)
-	}
-}
-
-func genCorrelationID() (string, error) {
-	newUUID, err := uuid.NewUUID()
-	if err != nil {
-		return "", fmt.Errorf("Unable to generate correlation ID: %v", err)
-	}
-
-	return newUUID.String(), nil
-
-}
-
 type responseRecorder struct {
 	http.ResponseWriter
 	status int
-	log    *logrus.Entry
+	log    *logrus.Logger
 }
 
 func (r *responseRecorder) WriteHeader(code int) {

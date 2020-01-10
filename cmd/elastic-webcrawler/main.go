@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/joho/godotenv"
+	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
+	"github.com/wambozi/elastic-webcrawler/m/conf"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/logging"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/serving"
 )
 
 var (
@@ -41,7 +45,7 @@ func main() {
 
 // Run executes the lambda function
 func run(logger *logrus.Logger) error {
-
+	env := conf.GetEnvironment()
 	// Load .env if its present (used for local dev)
 	if err := godotenv.Load(); err != nil {
 		logger.Info("No .env file found.")
@@ -124,9 +128,40 @@ func run(logger *logrus.Logger) error {
 		return err
 	}
 
-	status := crawler.New(elasticClient, redisClient, logger)
+	c, err := conf.Setup(env)
+	if err != nil {
+		return fmt.Errorf("Could not configure application : %w", err)
+	}
+	logger.Infof("Configuration : %+v", c)
 
-	fmt.Println(status)
+	r := httprouter.New()
+
+	server := serving.NewServer(c, elasticClient, redisClient, r, logger)
+	logger.Infof("Server components: %+v", server)
+
+	httpServer := server.NewHTTPServer(c)
+	logger.Infof("httpServer : %+v", httpServer)
+
+	var doOnce sync.Once               //for closing the error channel
+	var wg sync.WaitGroup              //for ensuring graceful shutdown
+	signals := make(chan os.Signal)    //for shutdown signals
+	httpSvrErrs := make(chan error, 2) //for http server errors
+
+	wg.Add(1)
+	go server.Begin(httpServer, &wg, &doOnce, signals, httpSvrErrs)
+
+	wg.Wait()
+	logger.Infof("Server stopped")
+
+	if len(httpSvrErrs) > 0 {
+		var errs []string
+
+		for v := range httpSvrErrs {
+			errs = append(errs, v.Error())
+		}
+
+		return fmt.Errorf(strings.Join(errs, "  |  "))
+	}
 
 	return nil
 }
