@@ -1,0 +1,67 @@
+package conf
+
+import (
+	"fmt"
+	"github.com/spf13/viper"
+)
+
+//Configuration holds configuration values for the application
+type Configuration struct {
+	Server  ServerConfiguration
+	Storage StorageConfiguration
+}
+
+//StorageConfiguration holds configuration values for the data store
+type StorageConfiguration struct {
+	ConnectionURI string
+}
+
+//ServerConfiguration holds configuration values for the server
+type ServerConfiguration struct {
+	Port                    int
+	ReadHeaderTimeoutMillis int
+}
+
+//GetEnvironment determine the environment in which this application is deployed
+func GetEnvironment() string {
+	//these will be uppercased automatically
+	viper.SetEnvPrefix("env")
+	viper.BindEnv("id")
+
+	env := viper.Get("id")
+
+	return fmt.Sprintf("%v", env)
+}
+
+//Setup provides application configuration info
+func Setup(env string) (*Configuration, error) {
+	//default config name (that does not exist) to intentionally cause errors on startup if config file not found
+	viper.SetConfigName("no-config-set")
+
+	if env == "lle" {
+		viper.SetConfigName("lower-level")
+	}
+
+	if env == "prod" {
+		viper.SetConfigName("prod")
+	}
+
+	//needed when built at ./cmd/gitlab.com/westcreek/information/example-projects/sample-web-service-application-go/
+	viper.AddConfigPath("../../conf/")
+	//needed when built at project root (E.g. when invoked with 'make build')
+	viper.AddConfigPath("conf/")
+	//needed when unit tests are executed in this package
+	viper.AddConfigPath(".")
+
+	var configs Configuration
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("Error reading config file: %w", err)
+	}
+	err := viper.Unmarshal(&configs)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to unmarshal into struct: %w", err)
+	}
+
+	return &configs, nil
+}
