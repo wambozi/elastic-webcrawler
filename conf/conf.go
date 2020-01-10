@@ -2,6 +2,7 @@ package conf
 
 import (
 	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -10,16 +11,22 @@ type Configuration struct {
 	Server        ServerConfiguration
 	Elasticsearch ElasticsearchConfiguration
 	Redis         RedisConfiguration
+	AWS           AwsConfig
+}
+
+//AwsConfig represents the values required to instantiate AWS services/clients
+type AwsConfig struct {
+	Region string
 }
 
 //ElasticsearchConfiguration holds configuration values for the Elasticsearch cluster
 type ElasticsearchConfiguration struct {
-	ConnectionURI string
+	SecretName string
 }
 
 //RedisConfiguration holds configuration values for the data Redis cache
 type RedisConfiguration struct {
-	ConnectionURI string
+	SecretName string
 }
 
 //ServerConfiguration holds configuration values for the server

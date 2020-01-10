@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
@@ -23,15 +22,6 @@ var (
 	redisCreds   clients.Credentials
 )
 
-// EnvConfig represents all of the environment specific information needed for the application to do its job
-type EnvConfig struct {
-	region              string
-	env                 string
-	elasticsearchSecret string
-	redisSecret         string
-	profile             *string
-}
-
 // entrypoint
 func main() {
 	logger := logrus.New()
@@ -45,31 +35,24 @@ func main() {
 
 // Run executes the lambda function
 func run(logger *logrus.Logger) error {
-	env := conf.GetEnvironment()
-	// Load .env if its present (used for local dev)
-	if err := godotenv.Load(); err != nil {
-		logger.Info("No .env file found.")
-	}
-
-	config := EnvConfig{
-		region:              os.Getenv("REGION"),
-		env:                 os.Getenv("ENVIRONMENT"),
-		elasticsearchSecret: os.Getenv("ELASTICSEARCH_SECRET"),
-		redisSecret:         os.Getenv("REDIS_SECRET"),
+	e := conf.GetEnvironment()
+	c, err := conf.Setup(e)
+	if err != nil {
+		return err
 	}
 
 	awsConfig := clients.AwsConfig{
 		Main: aws.Config{
-			Region: aws.String(config.region),
+			Region: aws.String(c.AWS.Region),
 		},
 		Secrets: []clients.Secrets{
 			{
 				Type:   "elasticsearch",
-				Secret: config.elasticsearchSecret,
+				Secret: c.Elasticsearch.SecretName,
 			},
 			{
 				Type:   "redis",
-				Secret: config.redisSecret,
+				Secret: c.Redis.SecretName,
 			},
 		},
 	}
@@ -128,10 +111,6 @@ func run(logger *logrus.Logger) error {
 		return err
 	}
 
-	c, err := conf.Setup(env)
-	if err != nil {
-		return fmt.Errorf("Could not configure application : %w", err)
-	}
 	logger.Infof("Configuration : %+v", c)
 
 	r := httprouter.New()
@@ -160,6 +139,7 @@ func run(logger *logrus.Logger) error {
 			errs = append(errs, v.Error())
 		}
 
+		logger.Error(strings.Join(errs, "  |  "))
 		return fmt.Errorf(strings.Join(errs, "  |  "))
 	}
 

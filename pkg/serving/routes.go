@@ -63,15 +63,6 @@ func NewServer(c *conf.Configuration, ec *elasticsearch.Client, rc *redis.Client
 	return server
 }
 
-//NewElasticsearchClient provides a connection to the webcrawler's Elasticsearch cluster
-func NewElasticsearchClient(c *conf.ElasticsearchConfiguration) (*Elasticsearch, error) {
-	//here you would use storage configuration info to create a postgres connection, prepare statements (if needed), etc, and then return *sql.DB.
-	//Returning *storage for illustration purposes only.
-	return &Elasticsearch{
-		Cluster: fmt.Sprintf("Successful connection to : %s", c.ConnectionURI),
-	}, nil
-}
-
 //NewHTTPServer provides a server setup based on config values
 func (s *Server) NewHTTPServer(c *conf.Configuration) *http.Server {
 	return &http.Server{
@@ -132,6 +123,5 @@ func closeChannel(once *sync.Once, channel chan<- error) {
 }
 
 func (s *Server) routes() {
-	s.Router.HandlerFunc("POST", "/split", s.execDurLog(s.reqResLog(s.handleCrawl())))
-	s.Router.ServeFiles("/docs/*filepath", http.Dir("./pkg/serving/swagger/"))
+	s.Router.HandlerFunc("POST", "/crawl", s.execDurLog(s.reqResLog(s.handleCrawl())))
 }
