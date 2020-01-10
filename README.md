@@ -2,7 +2,7 @@
 
 ## Description
 
-Golang Lambda Function that indexes web pages in Elasticsearch.
+Golang API that indexes web pages in Elasticsearch.
 
 ## Dependencies
 
@@ -10,3 +10,13 @@ Golang Lambda Function that indexes web pages in Elasticsearch.
 - `Serverless v1.60.4^`
 - `Elasticsearch v7.5.1^`
 - `Redis 5.0.7`
+
+## Contributors
+
+- Adam Bemiller
+  - Adam provided most of the high level project and server/routes framework for this project. Huge thanks to him!
+
+## License
+
+MIT License
+
