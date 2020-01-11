@@ -10,8 +10,8 @@ import (
 
 // Response is a concrete representation of the response to the client calling the crawl
 type Response struct {
-	Status int    `json:"status"`
-	URL    string `json:"url"`
+	Status  int    `json:"status"`
+	Message string `json:"url"`
 }
 
 type errorResponse struct {
@@ -34,9 +34,9 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			return
 		}
 
-		crawler.Init(s.EventEmitter, s.RedisClient, b, s.Log)
+		status := crawler.Init(s.EventEmitter, s.ElasticClient, s.RedisClient, b, s.Log)
 
-		res := Response{Status: 202, URL: b.URL}
+		res := Response{Status: status, Message: b.URL}
 		response, err := json.Marshal(res)
 		if err != nil {
 			es := fmt.Sprintf("Failed to marshal %+v", res)

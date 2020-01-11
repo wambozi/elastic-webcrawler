@@ -20,13 +20,47 @@ type Retries struct {
 	Number  int  `json:"number,omitempty"`
 }
 
+// EventPayload represents the payload sent in the event emitted by redis actions
+type EventPayload struct {
+	EventEmitter  events.EventEmmiter
+	RedisClient   *redis.Client
+	ElasticClient *elasticsearch.Client
+	Logger        *logrus.Logger
+}
+
 // Init initializes a new crawl
-func Init(eventEmitter events.EventEmmiter, redisClient *redis.Client, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
+func Init(eventEmitter events.EventEmmiter, elasticClient *elasticsearch.Client, redisClient *redis.Client, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
+	// Clear the READY set if it exists
+	del := redisClient.Del(cr.URL + "_READY")
+	_, err := del.Result()
+	if err != nil {
+		logger.Error(err)
+		return 400
+	}
+
+	// add URL to READY set
+	res := redisClient.SAdd(cr.URL+"_READY", cr.URL)
+	addStatus, err := res.Result()
+	if err != nil {
+		logger.Error(err)
+		return 400
+	}
+	if addStatus <= 0 {
+		logger.Errorf("Redis failed to add link to READY set. add status: %d", addStatus)
+		return 400
+	}
+	payload := EventPayload{
+		EventEmitter:  eventEmitter,
+		ElasticClient: elasticClient,
+		RedisClient:   redisClient,
+		Logger:        logger,
+	}
+	eventEmitter.Emit("READY", payload)
 	return 201
 }
 
 // New instatiates a new instance of the webcrawler
-func New(eventEmitter events.EventEmmiter, elasticClient *elasticsearch.Client, redisClient *redis.Client, logger *logrus.Logger) {
+func New(eventPayload EventPayload) {
 	// TODO:
 	// 		- render the page
 	// 		- get the structured data

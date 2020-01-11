@@ -10,8 +10,8 @@ func Events(logger *logrus.Logger) events.EventEmmiter {
 	e := events.New()
 	logger.Info("Creating Event Emitter.")
 
-	e.On("READY", func(payload ...interface{}) {
-		logger.Info(payload)
+	e.On("READY", func(payload EventPayload) {
+
 	})
 
 	e.On("STARTED", func(payload ...interface{}) {
