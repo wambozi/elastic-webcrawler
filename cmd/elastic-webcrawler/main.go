@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/logging"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/serving"
 )
@@ -114,8 +115,9 @@ func run(logger *logrus.Logger) error {
 	logger.Infof("Configuration : %+v", c)
 
 	r := httprouter.New()
+	emitter := crawler.Events(logger)
 
-	server := serving.NewServer(c, elasticClient, redisClient, r, logger)
+	server := serving.NewServer(c, emitter, elasticClient, redisClient, r, logger)
 	logger.Infof("Server components: %+v", server)
 
 	httpServer := server.NewHTTPServer(c)

@@ -3,6 +3,7 @@ package crawler
 import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/go-redis/redis"
+	"github.com/kataras/go-events"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,7 +24,7 @@ var (
 )
 
 // New instatiates a new instance of the webcrawler
-func New(elasticClient *elasticsearch.Client, redisClient *redis.Client, logger *logrus.Logger) (statusCode int) {
+func New(eventEmitter events.EventEmmiter, elasticClient *elasticsearch.Client, redisClient *redis.Client, logger *logrus.Logger) (statusCode int) {
 	// TODO:
 	//	- for each of the links in URLs
 	// 		- add link to the PROCESSING set in Redis
