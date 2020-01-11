@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
@@ -18,9 +17,7 @@ import (
 )
 
 var (
-	err          error
-	elasticCreds clients.Credentials
-	redisCreds   clients.Credentials
+	err error
 )
 
 // entrypoint
@@ -36,44 +33,14 @@ func main() {
 
 // Run executes the lambda function
 func run(logger *logrus.Logger) error {
+	logger.Info("No .env file found. Using viper to get config values.")
 	e := conf.GetEnvironment()
 	c, err := conf.Setup(e)
 	if err != nil {
 		return err
 	}
 
-	awsConfig := clients.AwsConfig{
-		Main: aws.Config{
-			Region: aws.String(c.AWS.Region),
-		},
-		Secrets: []clients.Secrets{
-			{
-				Type:   "elasticsearch",
-				Secret: c.Elasticsearch.SecretName,
-			},
-			{
-				Type:   "redis",
-				Secret: c.Redis.SecretName,
-			},
-		},
-	}
-
-	// Use the SecretInput and AWS environment to get the credentials used to connect to Elasticsearch
-	credentials, err := clients.SecretsManagerClient(awsConfig, logger)
-	if err != nil {
-		return err
-	}
-
-	for _, credsWrapper := range credentials {
-		if credsWrapper.Type == "elasticsearch" {
-			elasticCreds = credsWrapper.Credentials
-		}
-		if credsWrapper.Type == "redis" {
-			redisCreds = credsWrapper.Credentials
-		}
-	}
-
-	elasticConfig := clients.GenerateElasticConfig([]string{elasticCreds.Endpoint}, elasticCreds.Username, elasticCreds.Password)
+	elasticConfig := clients.GenerateElasticConfig([]string{c.Elasticsearch.Endpoint}, c.Elasticsearch.Username, c.Elasticsearch.Password)
 	elasticClient, err := clients.CreateElasticClient(elasticConfig)
 	if err != nil {
 		return err
@@ -94,16 +61,11 @@ func run(logger *logrus.Logger) error {
 
 	// now that we've added the ELastic hook to the logger, we'll log errs as they occur so they show
 	// up in Elasticsearch but still return them so they are logged in the console
-	redisDB, err := strconv.Atoi(redisCreds.Database)
-	if err != nil {
-		logger.Error(err)
-		return err
-	}
 
-	redisConfig := &clients.RedisOptions{
-		Host:     redisCreds.Endpoint,
-		Password: redisCreds.Password,
-		Database: redisDB,
+	redisConfig := &conf.RedisOptions{
+		Host:     c.Redis.Host + ":" + strconv.Itoa(c.Redis.Port),
+		Password: c.Redis.Password,
+		Database: c.Redis.Database,
 	}
 
 	redisClient, err := clients.CreateRedisClient(redisConfig)

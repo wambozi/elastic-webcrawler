@@ -1,34 +1,22 @@
 package clients
 
 import (
-	"log"
-
 	"github.com/go-redis/redis"
 	"github.com/kataras/go-events"
+	"github.com/wambozi/elastic-webcrawler/m/conf"
 )
 
-// RedisOptions for the Redis Client
-type RedisOptions struct {
-	Host     string
-	Password string
-	Database int
-}
-
 // CreateRedisClient returns a new instance of the redis client
-func CreateRedisClient(c *RedisOptions) (*redis.Client, error) {
+func CreateRedisClient(c *conf.RedisOptions) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     c.Host,
 		Password: c.Password,
 		DB:       c.Database,
 	})
 
-	pong, err := client.Ping().Result()
+	_, err := client.Ping().Result()
 	if err != nil {
 		return nil, err
-	}
-
-	if pong != "" {
-		log.Println("Creating Redis Client... Done.")
 	}
 
 	return client, nil

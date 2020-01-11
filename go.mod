@@ -7,6 +7,7 @@ require (
 	github.com/elastic/go-elasticsearch v0.0.0
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20191218082911-5398a82b748f
 	github.com/go-redis/redis v6.15.6+incompatible
+	github.com/joho/godotenv v1.3.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kataras/go-events v0.0.2
 	github.com/onsi/ginkgo v1.11.0 // indirect

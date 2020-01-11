@@ -12,9 +12,14 @@ clean:
 		docker stop $$elasticRunner; \
 		docker rm -f $$elasticRunner; \
 	done
+	for elasticRunner in $$(docker ps -a --filter=name=redis -q); do \
+		docker stop $$elasticRunner; \
+		docker rm -f $$elasticRunner; \
+	done
 	for network in $$(docker network ls | grep testing | awk '{print $$1}'); do \
 		docker network rm $$network; \
 	done
+	
 
 .PHONY: compile
 compile:
@@ -45,13 +50,12 @@ test-runner: clean
 test-local: export ELASTICSEARCH_ENDPOINT=http://localhost:9200
 test-local: clean
 	[ -d reports ] || mkdir reports
-	docker run -it -d --name redis -p 6200:6200 redis
+	docker run -it -d --name redis -p 6379:6379 redis
 	docker run -it -d --name elastic -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
-	echo $$ELASTICSEARCH_ENDPOINT
 	until $$(curl --output /dev/null --silent --head --fail $$ELASTICSEARCH_ENDPOINT); do \
 		printf '.' ; \
 		sleep 5 ; \
-	done 
+	done
 	curl  -H "Content-Type:application/json" -XPUT $$ELASTICSEARCH_ENDPOINT/test/_doc/1234 -d '{ "title" : "test", "post_date" : "2009-11-15T14:12:12", "message" : "testing out Elasticsearch" }'
 	go test --coverprofile=reports/cov.out $$(go list ./... | grep -v /vendor/)
 	go tool cover -func=reports/cov.out
