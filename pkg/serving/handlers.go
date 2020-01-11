@@ -21,10 +21,17 @@ type errorResponse struct {
 func (s *Server) handleCrawl() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var b crawler.CrawlRequest
+		w.Header().Set("Content-Type", "application/json")
 
 		err := json.NewDecoder(r.Body).Decode(&b)
 		if err != nil {
 			s.Log.Error(err)
+			er := errorResponse{Error: err.Error()}
+			ers, _ := json.Marshal(er)
+
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(ers)
+			return
 		}
 
 		crawler.Init(s.EventEmitter, s.RedisClient, b, s.Log)
@@ -40,7 +47,6 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			w.Write(ers)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		w.Write(response)
 	}

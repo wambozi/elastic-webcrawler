@@ -1,5 +1,6 @@
 OUT := ./bin/elastic-webcrawler
 PKG := github.com/wambozi/elastic-webcrawler
+VERSION := $(shell git describe --always --long --dirty)
 ELASTIC_VERSION := 7.5.1
 
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
@@ -25,7 +26,7 @@ clean:
 compile:
 	go env -w GOPRIVATE=github.com/wambozi/*
 	export GOFLAGS="-mod=vendor"
-	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o ${OUT} -ldflags="-extldflags \"-static\""
+	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o ${OUT} -ldflags="-extldflags \"-static\"" ./cmd/elastic-webcrawler/main.go
 
 .PHONY: format
 format:
@@ -74,7 +75,7 @@ lint:
 sonar:
 	gitlab-sonar-scanner -Dsonar.login=${SONAR_USER_TOKEN}
 
-.PHONY: deploy
-deploy:
-	@export VERSION=${VERSION}
-	serverless deploy --stage dev
+.PHONY: docker-build
+docker-build: compile
+	docker build --build-arg "ENV_ID=local" -t wambozi/elastic-webcrawler:${VERSION} .
+	docker tag wambozi/elastic-webcrawler:${VERSION} wambozi/elastic-webcrawler:latest
