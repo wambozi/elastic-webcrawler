@@ -1,12 +1,24 @@
 package clients
 
 import (
+	"context"
+	"encoding/json"
+	"io"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/sirupsen/logrus"
 )
+
+// Document represents the doc that gets indexed in Elasticsearch
+type Document struct {
+	Index, DocumentID string
+	Body              io.Reader
+}
 
 // GenerateElasticConfig returns the elasticsearch config given the endpoint(s), username and password
 func GenerateElasticConfig(endpoint []string, username string, password string) elasticsearch.Config {
@@ -35,4 +47,45 @@ func CreateElasticClient(cfg elasticsearch.Config) (client *elasticsearch.Client
 	}
 
 	return client, nil
+}
+
+// IndexDocument takes a document and indexes it in Elasticsearch
+func IndexDocument(es *elasticsearch.Client, d Document, logger *logrus.Logger) {
+	var (
+		r  map[string]interface{}
+		wg sync.WaitGroup
+	)
+	wg.Add(1)
+
+	go func(d Document) {
+		defer wg.Done()
+
+		// Define the request object
+		req := esapi.IndexRequest{
+			Index:      d.Index,
+			DocumentID: d.DocumentID,
+			Body:       d.Body,
+			Refresh:    "true",
+		}
+
+		// Perform the request with the provided client
+		res, err := req.Do(context.Background(), es)
+		if err != nil {
+			// Fatal error if the indexing request throws
+			logger.Errorf("Error getting index response: %s", err)
+		}
+		defer res.Body.Close()
+
+		// If the response is an error, print but proceed
+		if res.IsError() {
+			logger.Errorf("[%s] Error indexing document ID=%s", res.Status(), d.DocumentID)
+		} else {
+			// Deserialize the response into a map
+			if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+				logger.Errorf("Error deserializing the response object: %s", err)
+			} else {
+				logger.Infof("[%s] %s; version=%d", res.Status(), r["result"], int(r["_version"].(float64)))
+			}
+		}
+	}(d)
 }

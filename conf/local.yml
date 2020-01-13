@@ -1,0 +1,14 @@
+elasticsearch:
+  endpoint: http://localhost:9200
+  password: changeme
+  username: elastic
+
+redis:
+  host: localhost
+  port: 6379
+  database: 0
+  password: ""
+
+server:
+  port: 8081
+  readHeaderTimeoutMillis: 3000
