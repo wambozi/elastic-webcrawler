@@ -2,14 +2,32 @@
 
 ## Description
 
-Golang API that indexes web pages in Elasticsearch.
+Golang API that indexes web pages in Elasticsearch. Accepts POST requests and runs a crawl in the background.
 
 ## Dependencies
 
 - `go 1.13.5^`
-- `Serverless v1.60.4^`
 - `Elasticsearch v7.5.1^`
-- `Redis 5.0.7`
+
+### `POST /crawl`
+
+Example POST body:
+
+```JSON
+{
+    "index": "demo",
+    "url": "http://www.google.com"
+}
+```
+
+Example response:
+
+```JSON
+{
+    "status": 201,
+    "url": "http://www.google.com"
+}
+```
 
 ## Contributors
 
