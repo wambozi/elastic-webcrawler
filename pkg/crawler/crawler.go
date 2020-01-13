@@ -68,9 +68,11 @@ func Init(elasticClient *elasticsearch.Client, cr CrawlRequest, logger *logrus.L
 
 	go func() { queue <- cr.URL }()
 
-	for uri := range queue {
-		enqueue(uri, cr.Index, queue, elasticClient, logger)
-	}
+	go func() {
+		for uri := range queue {
+			enqueue(uri, cr.Index, queue, elasticClient, logger)
+		}
+	}()
 
 	return 201
 }
@@ -92,7 +94,7 @@ func enqueue(uri string, index string, queue chan string, elasticClient *elastic
 
 	defer resp.Body.Close()
 
-	page := RenderPage(resp.Body)
+	page := RenderPage(uri, resp.Body)
 	doc, err := CreateDocument(index, page)
 	if err != nil {
 		logger.Error(err)
@@ -125,7 +127,7 @@ func fixURL(href, base string) (URL string, err error) {
 }
 
 // RenderPage takes an io.Reader and a returns
-func RenderPage(httpBody io.Reader) RenderedPage {
+func RenderPage(uri string, httpBody io.Reader) RenderedPage {
 	var renderedPage RenderedPage
 	page := html.NewTokenizer(httpBody)
 	h1 := []string{}
@@ -138,6 +140,7 @@ func RenderPage(httpBody io.Reader) RenderedPage {
 	for {
 		tokenTag := page.Next()
 		if tokenTag == html.ErrorToken {
+			renderedPage.URI = uri
 			renderedPage.Links = links
 			renderedPage.Source.h2 = h2
 			renderedPage.Source.h3 = h3
