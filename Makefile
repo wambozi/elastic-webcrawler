@@ -13,10 +13,6 @@ clean:
 		docker stop $$elasticRunner; \
 		docker rm -f $$elasticRunner; \
 	done
-	for elasticRunner in $$(docker ps -a --filter=name=redis -q); do \
-		docker stop $$elasticRunner; \
-		docker rm -f $$elasticRunner; \
-	done
 	for network in $$(docker network ls | grep testing | awk '{print $$1}'); do \
 		docker network rm $$network; \
 	done
@@ -36,7 +32,6 @@ format:
 test-runner: export ELASTICSEARCH_ENDPOINT=http://172.18.0.2:9200
 test-runner: clean
 	[ -d reports ] || mkdir reports
-	docker run -it -d --name redis -p 6200:6200 redis
 	docker network create testing --subnet=172.18.0.0/16 --gateway=172.18.0.1
 	docker run -it --network testing --ip 172.18.0.2 -d --name elastic -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
 	until $$(curl --output /dev/null --silent --head --fail $$ELASTICSEARCH_ENDPOINT); do \
@@ -51,7 +46,6 @@ test-runner: clean
 test-local: export ELASTICSEARCH_ENDPOINT=http://localhost:9200
 test-local: clean
 	[ -d reports ] || mkdir reports
-	docker run -it -d --name redis -p 6379:6379 redis
 	docker run -it -d --name elastic -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
 	until $$(curl --output /dev/null --silent --head --fail $$ELASTICSEARCH_ENDPOINT); do \
 		printf '.' ; \

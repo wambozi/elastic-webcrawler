@@ -3,19 +3,18 @@ package crawler
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
-	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/gocolly/colly"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
-	"golang.org/x/net/html"
 )
 
 var visited = make(map[string]bool)
@@ -23,13 +22,6 @@ var exists = struct{}{}
 
 type set struct {
 	m map[string]struct{}
-}
-
-// CrawlRequest represents the request to the /crawl route
-type CrawlRequest struct {
-	Index   string  `json:"index"`
-	URL     string  `json:"url"`
-	Retries Retries `json:"retries,omitempty"`
 }
 
 // Retries represents the Error retries for Crawler requests
@@ -49,68 +41,103 @@ type Source struct {
 
 // Meta represents the data scraped from the metadata of the page
 type Meta struct {
-	ogImage string
-	title   string
-	desc    string
+	OgImage  string
+	Title    string
+	Desc     string
+	Keywords string
 }
 
 // RenderedPage represents the structred data scraped from the page
 type RenderedPage struct {
 	URI    string
-	Links  []string
-	Source Source
+	Source map[string][]string
 	Meta   Meta
+}
+
+// CrawlRequest represents the request to the /crawl route
+type CrawlRequest struct {
+	Index    string `json:"index"`
+	URL      string `json:"url"`
+	OnDomain bool   `json:"on_domain,omitempty"`
 }
 
 // Init initializes a new crawl
 func Init(elasticClient *elasticsearch.Client, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
-	queue := make(chan string)
+	validURL, err := url.ParseRequestURI(cr.URL)
+	if err != nil {
+		return 400
+	}
 
-	go func() { queue <- cr.URL }()
+	domain := validURL.Hostname()
 
-	go func() {
-		for uri := range queue {
-			enqueue(uri, cr.Index, queue, elasticClient, logger)
-		}
-	}()
+	go func(u string, d string, i string, e *elasticsearch.Client, l *logrus.Logger) { Crawl(u, d, i, e, l) }(validURL.String(), domain, cr.Index, elasticClient, logger)
 
 	return 201
 }
 
-func enqueue(uri string, index string, queue chan string, elasticClient *elasticsearch.Client, logger *logrus.Logger) {
-	logger.Infof("Fetching: %s", uri)
-	visited[uri] = true
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
+func appendToSlice(sl *[]string, ml string) {
+	*sl = append(*sl, ml)
+}
 
-	client := http.Client{Transport: transport}
-	resp, err := client.Get(uri)
-	if err != nil {
-		return
-	}
+// Crawl does the crawling
+func Crawl(uri string, domain string, index string, elasticClient *elasticsearch.Client, logger *logrus.Logger) {
+	c := colly.NewCollector(
+		colly.AllowedDomains(domain),
+	)
 
-	defer resp.Body.Close()
+	// Callback for when a scraped page contains an article element
+	c.OnHTML("article", func(e *colly.HTMLElement) {
+		page := RenderedPage{
+			URI: e.Request.URL.String(),
+			Meta: Meta{
+				Title: e.DOM.Find("title").Text(),
+			},
+			Source: make(map[string][]string),
+		}
 
-	page := RenderPage(uri, resp.Body)
-	doc, err := CreateDocument(index, page)
-	if err != nil {
-		logger.Error(err)
-	}
+		metaTags := e.DOM.ParentsUntil("~").Find("meta")
+		metaTags.Each(func(_ int, s *goquery.Selection) {
+			name, _ := s.Attr("name")
+			if strings.EqualFold(name, "description") {
+				content, _ := s.Attr("content")
+				page.Meta.Desc = content
+			}
+			if strings.EqualFold(name, "keywords") {
+				content, _ := s.Attr("content")
+				page.Meta.Keywords = content
+			}
+		})
 
-	clients.IndexDocument(elasticClient, doc, logger)
+		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+				page.Source[el] = append(page.Source[el], s.Text())
+			})
+		}
 
-	for _, link := range page.Links {
-		absolute, err := fixURL(link, uri)
+		doc, err := CreateDocument(index, page)
 		if err != nil {
 			logger.Error(err)
 		}
-		if !visited[absolute] {
-			go func() { queue <- absolute }()
-		}
-	}
+
+		clients.IndexDocument(elasticClient, doc, logger)
+	})
+
+	// Callback for links on scraped pages
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		c.Visit(e.Request.AbsoluteURL(link))
+	})
+
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		RandomDelay: (1 * time.Second) / 3,
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		logger.Infof("Visiting: %s", r.URL.String())
+	})
+
+	c.Visit(uri)
 }
 
 func fixURL(href, base string) (URL string, err error) {
@@ -124,89 +151,6 @@ func fixURL(href, base string) (URL string, err error) {
 	}
 	uri = baseURL.ResolveReference(uri)
 	return uri.String(), nil
-}
-
-// RenderPage takes an io.Reader and a returns
-func RenderPage(uri string, httpBody io.Reader) RenderedPage {
-	var renderedPage RenderedPage
-	page := html.NewTokenizer(httpBody)
-	h1 := []string{}
-	h2 := []string{}
-	h3 := []string{}
-	h4 := []string{}
-	p := []string{}
-	links := []string{}
-	col := []string{}
-	for {
-		tokenTag := page.Next()
-		if tokenTag == html.ErrorToken {
-			renderedPage.URI = uri
-			renderedPage.Links = links
-			renderedPage.Source.h2 = h2
-			renderedPage.Source.h3 = h3
-			renderedPage.Source.h4 = h4
-			renderedPage.Source.p = p
-			return renderedPage
-		}
-		// get links
-		if tokenTag == html.StartTagToken {
-			token := page.Token()
-			if token.DataAtom.String() == "a" {
-				for _, attr := range token.Attr {
-					if attr.Key == "href" {
-						tl := trimHash(attr.Val)
-						col = append(col, tl)
-						resolv(&links, col)
-					}
-				}
-			}
-			//if the name of the element is "title"
-			if token.Data == "title" {
-				//the next token should be the page title
-				tokenTag = page.Next()
-				//just make sure it's actually a text token
-				if tokenTag == html.TextToken {
-					renderedPage.Meta.title = page.Token().Data
-				}
-			}
-			//if the name of the element is "title"
-			if token.Data == "h1" {
-				//the next token should be the page title
-				tokenTag = page.Next()
-				//just make sure it's actually a text token
-				if tokenTag == html.TextToken {
-					h1 = append(h1, page.Token().Data)
-				}
-			}
-			//if the name of the element is "title"
-			if token.Data == "h2" {
-				//the next token should be the page title
-				tokenTag = page.Next()
-				//just make sure it's actually a text token
-				if tokenTag == html.TextToken {
-					h2 = append(h2, page.Token().Data)
-				}
-			}
-			//if the name of the element is "title"
-			if token.Data == "h3" {
-				//the next token should be the page title
-				tokenTag = page.Next()
-				//just make sure it's actually a text token
-				if tokenTag == html.TextToken {
-					h3 = append(h3, page.Token().Data)
-				}
-			}
-			//if the name of the element is "title"
-			if token.Data == "p" {
-				//the next token should be the page title
-				tokenTag = page.Next()
-				//just make sure it's actually a text token
-				if tokenTag == html.TextToken {
-					p = append(p, page.Token().Data)
-				}
-			}
-		}
-	}
 }
 
 // CreateDocument returns the document to be indexed in Elasticsearch or an error
@@ -254,12 +198,51 @@ func check(sl []string, s string) bool {
 	return check
 }
 
+// validateURI takes a string, validates that it's a valid URI
+func validateURI(str string) bool {
+	_, err := url.ParseRequestURI(str)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// checkDomain takes a URI as a string and validates that it's on a provided domain
+func checkDomain(uri string, onDomain bool, domain string) bool {
+	parsedURI, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return false
+	}
+	if onDomain {
+		if parsedURI.Hostname() == domain {
+			return true
+		}
+	}
+	return true
+}
+
+// onlyWebPages checks that the link provided is a webpage and not a link to a file
+func onlyWebPages(uri string) (detections []int) {
+	var invalidPaths []string
+
+	invalidPaths = []string{".png", ".jpeg", ".jpg", ".ogg", ".woff", ".pdf", ".gif", ".tiff", ".svg"}
+	for _, p := range invalidPaths {
+		if strings.Contains(uri, p) {
+			detections = append(detections, 1)
+		}
+	}
+
+	return
+}
+
 // resolv adds links to the link slice and insures that there is no repetition
 // in our collection.
-func resolv(sl *[]string, ml []string) {
+func resolv(sl *[]string, ml []string, onDomain bool, domain string) {
 	for _, str := range ml {
-		if check(*sl, str) == false {
-			*sl = append(*sl, str)
+		if check(*sl, str) == false && validateURI(str) == true && len(onlyWebPages(str)) == 0 {
+			if checkDomain(str, onDomain, domain) == true {
+				*sl = append(*sl, str)
+			}
 		}
 	}
 }
