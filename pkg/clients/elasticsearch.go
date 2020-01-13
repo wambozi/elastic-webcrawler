@@ -50,7 +50,7 @@ func CreateElasticClient(cfg elasticsearch.Config) (client *elasticsearch.Client
 }
 
 // IndexDocument takes a document and indexes it in Elasticsearch
-func IndexDocument(es *elasticsearch.Client, d Document, logger *logrus.Logger) {
+func IndexDocument(elasticClient *elasticsearch.Client, d Document, logger *logrus.Logger) {
 	var (
 		r  map[string]interface{}
 		wg sync.WaitGroup
@@ -69,7 +69,7 @@ func IndexDocument(es *elasticsearch.Client, d Document, logger *logrus.Logger) 
 		}
 
 		// Perform the request with the provided client
-		res, err := req.Do(context.Background(), es)
+		res, err := req.Do(context.Background(), elasticClient)
 		if err != nil {
 			// Fatal error if the indexing request throws
 			logger.Errorf("Error getting index response: %s", err)
@@ -84,7 +84,7 @@ func IndexDocument(es *elasticsearch.Client, d Document, logger *logrus.Logger) 
 			if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 				logger.Errorf("Error deserializing the response object: %s", err)
 			} else {
-				logger.Infof("[%s] %s; version=%d", res.Status(), r["result"], int(r["_version"].(float64)))
+				logger.Infof("[%s] %s; version=%d; id=%s", res.Status(), r["result"], int(r["_version"].(float64)), d.DocumentID)
 			}
 		}
 	}(d)
