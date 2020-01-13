@@ -148,37 +148,40 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		idBytes := md5.Sum([]byte(e.Request.URL.String()))
 		idHash := hex.EncodeToString(idBytes[:])
-		page := RenderedPage{
-			ID:  idHash,
-			URI: e.Request.URL.String(),
-			Meta: Meta{
-				Title: e.DOM.Find("title").Text(),
-			},
+		page := clients.AppsearchDocument{
+			ID:     idHash,
+			URI:    e.Request.URL.String(),
+			Title:  e.DOM.Find("title").Text(),
 			Source: make(map[string][]string),
 		}
 
 		metaTags := e.DOM.ParentsUntil("~").Find("meta")
 		metaTags.Each(func(_ int, s *goquery.Selection) {
 			name, _ := s.Attr("name")
+			property, _ := s.Attr("property")
 			if strings.EqualFold(name, "description") {
 				content, _ := s.Attr("content")
-				page.Meta.Desc = content
+				page.Description = content
 			}
 			if strings.EqualFold(name, "keywords") {
 				content, _ := s.Attr("content")
-				page.Meta.Keywords = content
+				page.Keywords = content
+			}
+			if strings.EqualFold(property, "og:image") {
+				content, _ := s.Attr("content")
+				page.OgImage = content
 			}
 		})
 
-		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
-			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
-				page.Source[el] = append(page.Source[el], s.Text())
-			})
-		}
+		// for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+		// 	e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+		// 		page.Source[el] = append(page.Source[el], s.Text())
+		// 	})
+		// }
 
 		var bearer = "Bearer " + ac.Token
 		var endpoint = ac.Endpoint + ac.API + "engines/" + engine + "/documents"
-		logger.Info(endpoint)
+		logger.Info(page)
 
 		bodyJSON, err := json.Marshal(page)
 		if err != nil {
