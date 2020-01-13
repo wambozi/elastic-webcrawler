@@ -34,7 +34,7 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			return
 		}
 
-		status := crawler.Init(s.ElasticClient, b, s.Log)
+		status := crawler.Init(s.ElasticClient, s.AppsearchClient, b, s.Log)
 
 		res := Response{Status: status, Message: b.URL}
 		response, err := json.Marshal(res)

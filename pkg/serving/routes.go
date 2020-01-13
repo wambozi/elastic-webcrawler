@@ -14,49 +14,20 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
 )
-
-//Persister persists data
-type Persister interface {
-	Persist(someData string) (string, error)
-}
-
-//DatastoreNamer provides the name of the datastore
-type DatastoreNamer interface {
-	fmt.Stringer
-}
-
-//Storer persists data and provides information about the underlying datastore
-type Storer interface {
-	Persister
-	DatastoreNamer
-}
-
-//Persist saves data in a datastore
-func (st *Elasticsearch) Persist(someData string) (string, error) {
-	return fmt.Sprintf("I persisted - %s in - %s", someData, st.Cluster), nil
-}
-
-//String provides information about Storage's underlying datastore
-func (st *Elasticsearch) String() string {
-	return st.Cluster
-}
-
-//Elasticsearch defines datastore
-type Elasticsearch struct {
-	Cluster string
-}
 
 //Server defines storage and a router
 type Server struct {
-	ElasticClient *elasticsearch.Client
-	Router        *httprouter.Router
-	Log           *logrus.Logger
+	AppsearchClient *clients.AppsearchClient
+	ElasticClient   *elasticsearch.Client
+	Router          *httprouter.Router
+	Log             *logrus.Logger
 }
 
 //NewServer sets up storage, router and routes
-func NewServer(c *conf.Configuration, ec *elasticsearch.Client, r *httprouter.Router, log *logrus.Logger) *Server {
-	server := &Server{ElasticClient: ec, Router: r, Log: log}
+func NewServer(c *conf.Configuration, ac *clients.AppsearchClient, ec *elasticsearch.Client, r *httprouter.Router, log *logrus.Logger) *Server {
+	server := &Server{AppsearchClient: ac, ElasticClient: ec, Router: r, Log: log}
 	server.routes()
 	return server
 }

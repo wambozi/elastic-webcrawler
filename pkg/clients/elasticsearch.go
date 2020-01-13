@@ -14,8 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Document represents the doc that gets indexed in Elasticsearch
-type Document struct {
+// ElasticDocument represents the doc that gets indexed in Elasticsearch
+type ElasticDocument struct {
 	Index, DocumentID string
 	Body              io.Reader
 }
@@ -50,14 +50,14 @@ func CreateElasticClient(cfg elasticsearch.Config) (client *elasticsearch.Client
 }
 
 // IndexDocument takes a document and indexes it in Elasticsearch
-func IndexDocument(elasticClient *elasticsearch.Client, d Document, logger *logrus.Logger) {
+func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument, logger *logrus.Logger) {
 	var (
 		r  map[string]interface{}
 		wg sync.WaitGroup
 	)
 	wg.Add(1)
 
-	go func(d Document) {
+	go func(d ElasticDocument) {
 		defer wg.Done()
 
 		// Define the request object

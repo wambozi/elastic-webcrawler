@@ -3,11 +3,10 @@ elasticsearch:
   password: changeme
   username: elastic
 
-redis:
-  host: localhost
-  port: 6379
-  database: 0
-  password: ""
+appsearch:
+  endpoint: http://localhost:3002
+  api: /api/as/v1/
+  token: private-awjkziiruam9qrhw9z2x1wyt
 
 server:
   port: 8081

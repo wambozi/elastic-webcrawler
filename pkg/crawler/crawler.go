@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -17,52 +18,39 @@ import (
 	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
 )
 
-var visited = make(map[string]bool)
-var exists = struct{}{}
-
-type set struct {
-	m map[string]struct{}
-}
-
 // Retries represents the Error retries for Crawler requests
 type Retries struct {
 	Enabled bool `json:"enabled,omitempty"`
 	Number  int  `json:"number,omitempty"`
 }
 
-// Source represents the data scraped from the source of the HTML body on the page
-type Source struct {
-	h1 []string
-	h2 []string
-	h3 []string
-	h4 []string
-	p  []string
-}
-
-// Meta represents the data scraped from the metadata of the page
+// Meta represents the data scraped from the metdata of the HTML head on the page
 type Meta struct {
-	OgImage  string
-	Title    string
-	Desc     string
-	Keywords string
+	OgImage  string `json:"ogImage"`
+	Title    string `json:"title"`
+	Desc     string `json:"description"`
+	Keywords string `json:"keywords"`
 }
 
 // RenderedPage represents the structred data scraped from the page
 type RenderedPage struct {
-	URI    string
-	Source map[string][]string
-	Meta   Meta
+	ID     string              `json:"id,omitempty"`
+	URI    string              `json:"uri"`
+	Source map[string][]string `json:"source"`
+	Meta   Meta                `json:"meta"`
 }
 
 // CrawlRequest represents the request to the /crawl route
 type CrawlRequest struct {
 	Index    string `json:"index"`
 	URL      string `json:"url"`
-	OnDomain bool   `json:"on_domain,omitempty"`
+	OnDomain bool   `json:"on_domain"`
+	Engine   string `json:"engine"`
+	Type     string `json:"type"`
 }
 
 // Init initializes a new crawl
-func Init(elasticClient *elasticsearch.Client, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
+func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.AppsearchClient, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
 	validURL, err := url.ParseRequestURI(cr.URL)
 	if err != nil {
 		return 400
@@ -70,7 +58,17 @@ func Init(elasticClient *elasticsearch.Client, cr CrawlRequest, logger *logrus.L
 
 	domain := validURL.Hostname()
 
-	go func(u string, d string, i string, e *elasticsearch.Client, l *logrus.Logger) { Crawl(u, d, i, e, l) }(validURL.String(), domain, cr.Index, elasticClient, logger)
+	if cr.Type == "elasticsearch" {
+		go func(u string, d string, i string, e *elasticsearch.Client, l *logrus.Logger) {
+			ElasticCrawl(u, d, i, e, l)
+		}(validURL.String(), domain, cr.Index, elasticClient, logger)
+	}
+
+	if cr.Type == "app-search" {
+		go func(u string, d string, e string, a *clients.AppsearchClient, l *logrus.Logger) {
+			AppsearchCrawl(u, d, e, a, l)
+		}(validURL.String(), domain, cr.Engine, appsearchClient, logger)
+	}
 
 	return 201
 }
@@ -79,14 +77,14 @@ func appendToSlice(sl *[]string, ml string) {
 	*sl = append(*sl, ml)
 }
 
-// Crawl does the crawling
-func Crawl(uri string, domain string, index string, elasticClient *elasticsearch.Client, logger *logrus.Logger) {
+// ElasticCrawl does the crawling for Elasticsearch engines
+func ElasticCrawl(uri string, domain string, index string, elasticClient *elasticsearch.Client, logger *logrus.Logger) {
 	c := colly.NewCollector(
 		colly.AllowedDomains(domain),
 	)
 
 	// Callback for when a scraped page contains an article element
-	c.OnHTML("article", func(e *colly.HTMLElement) {
+	c.OnHTML("body", func(e *colly.HTMLElement) {
 		page := RenderedPage{
 			URI: e.Request.URL.String(),
 			Meta: Meta{
@@ -114,12 +112,93 @@ func Crawl(uri string, domain string, index string, elasticClient *elasticsearch
 			})
 		}
 
-		doc, err := CreateDocument(index, page)
+		doc, err := CreateElasticDocument(index, page)
 		if err != nil {
 			logger.Error(err)
 		}
 
 		clients.IndexDocument(elasticClient, doc, logger)
+	})
+
+	// Callback for links on scraped pages
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		c.Visit(e.Request.AbsoluteURL(link))
+	})
+
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		RandomDelay: (1 * time.Second) / 3,
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		logger.Infof("Visiting: %s", r.URL.String())
+	})
+
+	c.Visit(uri)
+}
+
+// AppsearchCrawl does the crawling for app-search engines
+func AppsearchCrawl(uri string, domain string, engine string, ac *clients.AppsearchClient, logger *logrus.Logger) {
+	c := colly.NewCollector(
+		colly.AllowedDomains(domain),
+	)
+
+	// Callback for when a scraped page contains an article element
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		idBytes := md5.Sum([]byte(e.Request.URL.String()))
+		idHash := hex.EncodeToString(idBytes[:])
+		page := RenderedPage{
+			ID:  idHash,
+			URI: e.Request.URL.String(),
+			Meta: Meta{
+				Title: e.DOM.Find("title").Text(),
+			},
+			Source: make(map[string][]string),
+		}
+
+		metaTags := e.DOM.ParentsUntil("~").Find("meta")
+		metaTags.Each(func(_ int, s *goquery.Selection) {
+			name, _ := s.Attr("name")
+			if strings.EqualFold(name, "description") {
+				content, _ := s.Attr("content")
+				page.Meta.Desc = content
+			}
+			if strings.EqualFold(name, "keywords") {
+				content, _ := s.Attr("content")
+				page.Meta.Keywords = content
+			}
+		})
+
+		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+				page.Source[el] = append(page.Source[el], s.Text())
+			})
+		}
+
+		var bearer = "Bearer " + ac.Token
+		var endpoint = ac.Endpoint + ac.API + "engines/" + engine + "/documents"
+		logger.Info(endpoint)
+
+		bodyJSON, err := json.Marshal(page)
+		if err != nil {
+			logger.Error(err)
+		}
+
+		doc := bytes.NewReader(bodyJSON)
+
+		req, err := http.NewRequest("POST", endpoint, doc)
+		req.Header.Add("Authorization", bearer)
+		req.Header.Add("Content-Type", "application/json")
+
+		client := ac.Client
+
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.Error(err)
+		}
+
+		logger.Info(resp)
 	})
 
 	// Callback for links on scraped pages
@@ -153,8 +232,8 @@ func fixURL(href, base string) (URL string, err error) {
 	return uri.String(), nil
 }
 
-// CreateDocument returns the document to be indexed in Elasticsearch or an error
-func CreateDocument(i string, p RenderedPage) (doc clients.Document, err error) {
+// CreateElasticDocument returns the document to be indexed in Elasticsearch or an error
+func CreateElasticDocument(i string, p RenderedPage) (doc clients.ElasticDocument, err error) {
 	idBytes := md5.Sum([]byte(p.URI))
 	idHash := hex.EncodeToString(idBytes[:])
 	bodyJSON, err := json.Marshal(p)
@@ -162,7 +241,7 @@ func CreateDocument(i string, p RenderedPage) (doc clients.Document, err error) 
 		return doc, err
 	}
 	r := bytes.NewReader(bodyJSON)
-	doc = clients.Document{
+	doc = clients.ElasticDocument{
 		Index:      i,
 		DocumentID: idHash,
 		Body:       r,

@@ -44,6 +44,8 @@ func run(logger *logrus.Logger) error {
 		return err
 	}
 
+	appClient := clients.CreateAppsearchClient(c.Appsearch.Endpoint, c.Appsearch.Token, c.Appsearch.API)
+
 	ipAddr, err := logging.GetIPAddr()
 	if err != nil {
 		return err
@@ -64,7 +66,7 @@ func run(logger *logrus.Logger) error {
 
 	r := httprouter.New()
 
-	server := serving.NewServer(c, elasticClient, r, logger)
+	server := serving.NewServer(c, appClient, elasticClient, r, logger)
 	logger.Infof("Server components: %+v", server)
 
 	httpServer := server.NewHTTPServer(c)
