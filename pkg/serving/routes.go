@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/go-redis/redis"
 	"github.com/julienschmidt/httprouter"
-	"github.com/kataras/go-events"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
 )
@@ -51,16 +49,14 @@ type Elasticsearch struct {
 
 //Server defines storage and a router
 type Server struct {
-	EventEmitter  events.EventEmmiter
 	ElasticClient *elasticsearch.Client
-	RedisClient   *redis.Client
 	Router        *httprouter.Router
 	Log           *logrus.Logger
 }
 
 //NewServer sets up storage, router and routes
-func NewServer(c *conf.Configuration, e events.EventEmmiter, ec *elasticsearch.Client, rc *redis.Client, r *httprouter.Router, log *logrus.Logger) *Server {
-	server := &Server{EventEmitter: e, ElasticClient: ec, RedisClient: rc, Router: r, Log: log}
+func NewServer(c *conf.Configuration, ec *elasticsearch.Client, r *httprouter.Router, log *logrus.Logger) *Server {
+	server := &Server{ElasticClient: ec, Router: r, Log: log}
 	server.routes()
 	return server
 }

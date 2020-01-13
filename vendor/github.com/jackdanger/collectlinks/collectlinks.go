@@ -1,32 +1,23 @@
-package crawler
+// Package collectlinks does extraordinarily simple operation of parsing a given piece of html
+// and providing you with all the hyperlinks hrefs it finds.
+package collectlinks
 
 import (
-	"fmt"
 	"io"
-	"runtime"
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/html"
 )
 
-func logError(logger *logrus.Logger, err error, requestID string) {
-	errFormat := "[error] in %s[%s:%d]"
-	pc, fn, line, _ := runtime.Caller(1)
-	logger.WithFields(logrus.Fields{
-		"caller":    fmt.Sprintf(errFormat, runtime.FuncForPC(pc).Name(), fn, line),
-		"requestID": requestID,
-	}).Error(err.Error())
-}
-
-// All takes a reader object and returns links from `href` elements from the DOM.
-// It does not close the reader.
+// All takes a reader object (like the one returned from http.Get())
+// It returns a slice of strings representing the "href" attributes from
+// anchor links found in the provided html.
+// It does not close the reader passed to it.
 func All(httpBody io.Reader) []string {
 	links := []string{}
 	col := []string{}
 	page := html.NewTokenizer(httpBody)
-
 	for {
 		tokenType := page.Next()
 		if tokenType == html.ErrorToken {
@@ -36,7 +27,7 @@ func All(httpBody io.Reader) []string {
 		if tokenType == html.StartTagToken && token.DataAtom.String() == "a" {
 			for _, attr := range token.Attr {
 				if attr.Key == "href" {
-					tl := trimAnchor(attr.Val)
+					tl := trimHash(attr.Val)
 					col = append(col, tl)
 					resolv(&links, col)
 				}
@@ -45,20 +36,22 @@ func All(httpBody io.Reader) []string {
 	}
 }
 
-func trimAnchor(link string) string {
-	if strings.Contains(link, "#") {
+// trimHash slices a hash # from the link
+func trimHash(l string) string {
+	if strings.Contains(l, "#") {
 		var index int
-		for n, str := range link {
+		for n, str := range l {
 			if strconv.QuoteRune(str) == "'#'" {
 				index = n
 				break
 			}
 		}
-		return link[:index]
+		return l[:index]
 	}
-	return link
+	return l
 }
 
+// check looks to see if a url exits in the slice.
 func check(sl []string, s string) bool {
 	var check bool
 	for _, str := range sl {
@@ -70,6 +63,8 @@ func check(sl []string, s string) bool {
 	return check
 }
 
+// resolv adds links to the link slice and insures that there is no repetition
+// in our collection.
 func resolv(sl *[]string, ml []string) {
 	for _, str := range ml {
 		if check(*sl, str) == false {

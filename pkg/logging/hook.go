@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/elastic/go-elasticsearch/esapi"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
 	elasticsearch "github.com/elastic/go-elasticsearch/v8"
 	"github.com/sirupsen/logrus"
 )

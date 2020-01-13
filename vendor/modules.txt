@@ -63,6 +63,8 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/jackdanger/collectlinks v0.0.0-20160421202702-24c4ee2870ba
+github.com/jackdanger/collectlinks
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 github.com/jmespath/go-jmespath
 # github.com/julienschmidt/httprouter v1.3.0

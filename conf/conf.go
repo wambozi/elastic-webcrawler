@@ -3,6 +3,10 @@ package conf
 import (
 	"fmt"
 
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/go-redis/redis"
+	"github.com/kataras/go-events"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -19,6 +23,14 @@ type RedisOptions struct {
 	Port     int
 	Password string
 	Database int
+}
+
+// EventPayload represents the payload sent in the event emitted by redis actions
+type EventPayload struct {
+	EventEmitter  events.EventEmmiter
+	RedisClient   *redis.Client
+	ElasticClient *elasticsearch.Client
+	Logger        *logrus.Logger
 }
 
 // ElasticOptions holds configuration values for the elasticsearch cluster

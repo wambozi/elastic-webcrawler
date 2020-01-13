@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/logging"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/serving"
 )
@@ -62,24 +60,11 @@ func run(logger *logrus.Logger) error {
 	// now that we've added the ELastic hook to the logger, we'll log errs as they occur so they show
 	// up in Elasticsearch but still return them so they are logged in the console
 
-	redisConfig := &conf.RedisOptions{
-		Host:     c.Redis.Host + ":" + strconv.Itoa(c.Redis.Port),
-		Password: c.Redis.Password,
-		Database: c.Redis.Database,
-	}
-
-	redisClient, err := clients.CreateRedisClient(redisConfig)
-	if err != nil {
-		logger.Error(err)
-		return err
-	}
-
 	logger.Infof("Configuration : %+v", c)
 
 	r := httprouter.New()
-	emitter := crawler.Events(logger)
 
-	server := serving.NewServer(c, emitter, elasticClient, redisClient, r, logger)
+	server := serving.NewServer(c, elasticClient, r, logger)
 	logger.Infof("Server components: %+v", server)
 
 	httpServer := server.NewHTTPServer(c)
