@@ -151,8 +151,8 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 		page := clients.AppsearchDocument{
 			ID:     idHash,
 			URI:    e.Request.URL.String(),
-			Title:  e.DOM.Find("title").Text(),
 			Source: make(map[string][]string),
+			Title:  e.DOM.ParentsUntil("~").Find("title").Text(),
 		}
 
 		metaTags := e.DOM.ParentsUntil("~").Find("meta")
@@ -181,7 +181,6 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 
 		var bearer = "Bearer " + ac.Token
 		var endpoint = ac.Endpoint + ac.API + "engines/" + engine + "/documents"
-		logger.Info(page)
 
 		bodyJSON, err := json.Marshal(page)
 		if err != nil {
@@ -201,7 +200,7 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 			logger.Error(err)
 		}
 
-		logger.Info(resp)
+		logger.Infof("App-Search Response: %s", resp)
 	})
 
 	// Callback for links on scraped pages

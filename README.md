@@ -9,6 +9,30 @@ Golang API that indexes web pages in Elasticsearch. Accepts POST requests and ru
 - `go 1.13.5^`
 - `Elasticsearch v7.5.1^`
 
+## Configuration
+
+Requires an config yaml in `conf`.
+
+For instance:
+
+Path: `/conf/local.yml`
+
+```YAML
+elasticsearch:
+  endpoint: http://localhost:9200
+  password: changeme
+  username: elastic
+
+appsearch:
+  endpoint: http://localhost:3002
+  api: /api/as/v1/
+  token: private-pq7aaoSDFapSADosdnfns
+
+server:
+  port: 8081
+  readHeaderTimeoutMillis: 3000
+```
+
 ### `POST /crawl`
 
 Example POST body:
