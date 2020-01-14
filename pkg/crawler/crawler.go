@@ -149,9 +149,10 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 		idBytes := md5.Sum([]byte(e.Request.URL.String()))
 		idHash := hex.EncodeToString(idBytes[:])
 		page := clients.AppsearchDocument{
-			ID:    idHash,
-			URI:   e.Request.URL.String(),
-			Title: e.DOM.Find("title").Text(),
+			ID:     idHash,
+			URI:    e.Request.URL.String(),
+			Title:  e.DOM.Find("title").Text(),
+			Source: make(map[string][]string),
 		}
 
 		metaTags := e.DOM.ParentsUntil("~").Find("meta")
@@ -172,11 +173,11 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 			}
 		})
 
-		// for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
-		// 	e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
-		// 		page.Source[el] = append(page.Source[el], s.Text())
-		// 	})
-		// }
+		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+				page.Source[el] = append(page.Source[el], s.Text())
+			})
+		}
 
 		var bearer = "Bearer " + ac.Token
 		var endpoint = ac.Endpoint + ac.API + "engines/" + engine + "/documents"
