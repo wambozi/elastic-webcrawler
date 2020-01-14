@@ -12,7 +12,7 @@ type AppsearchDocument struct {
 	Description string              `json:"description"`
 	URI         string              `json:"uri"`
 	Source      map[string][]string `json:"source"`
-	OgImage     string              `json:"ogImage"`
+	OgImage     string              `json:"ogimage"`
 	Title       string              `json:"title"`
 	Keywords    string              `json:"keywords"`
 }

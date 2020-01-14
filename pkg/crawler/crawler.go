@@ -128,7 +128,7 @@ func ElasticCrawl(uri string, domain string, index string, elasticClient *elasti
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		RandomDelay: (1 * time.Second) / 3,
+		RandomDelay: 1 * time.Second,
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -149,10 +149,9 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 		idBytes := md5.Sum([]byte(e.Request.URL.String()))
 		idHash := hex.EncodeToString(idBytes[:])
 		page := clients.AppsearchDocument{
-			ID:     idHash,
-			URI:    e.Request.URL.String(),
-			Title:  e.DOM.Find("title").Text(),
-			Source: make(map[string][]string),
+			ID:    idHash,
+			URI:   e.Request.URL.String(),
+			Title: e.DOM.Find("title").Text(),
 		}
 
 		metaTags := e.DOM.ParentsUntil("~").Find("meta")
@@ -212,7 +211,7 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		RandomDelay: (1 * time.Second) / 3,
+		RandomDelay: 1 * time.Second,
 	})
 
 	c.OnRequest(func(r *colly.Request) {
