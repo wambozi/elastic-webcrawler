@@ -26,7 +26,7 @@ type Retries struct {
 
 // Meta represents the data scraped from the metdata of the HTML head on the page
 type Meta struct {
-	OgImage  string `json:"ogImage"`
+	OgImage  string `json:"ogimage"`
 	Title    string `json:"title"`
 	Desc     string `json:"description"`
 	Keywords string `json:"keywords"`
@@ -96,6 +96,7 @@ func ElasticCrawl(uri string, domain string, index string, elasticClient *elasti
 		metaTags := e.DOM.ParentsUntil("~").Find("meta")
 		metaTags.Each(func(_ int, s *goquery.Selection) {
 			name, _ := s.Attr("name")
+			property, _ := s.Attr("property")
 			if strings.EqualFold(name, "description") {
 				content, _ := s.Attr("content")
 				page.Meta.Desc = content
@@ -103,6 +104,10 @@ func ElasticCrawl(uri string, domain string, index string, elasticClient *elasti
 			if strings.EqualFold(name, "keywords") {
 				content, _ := s.Attr("content")
 				page.Meta.Keywords = content
+			}
+			if strings.EqualFold(property, "og:image") {
+				content, _ := s.Attr("content")
+				page.Meta.OgImage = content
 			}
 		})
 

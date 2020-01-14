@@ -78,7 +78,7 @@ func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument, logge
 
 		// If the response is an error, print but proceed
 		if res.IsError() {
-			logger.Errorf("[%s] Error indexing document ID=%s", res.Status(), d.DocumentID)
+			logger.Errorf("[%s] Error indexing document ID=%s, err=%s", res.Status(), d.DocumentID, res.String())
 		} else {
 			// Deserialize the response into a map
 			if err := json.NewDecoder(res.Body).Decode(&r); err != nil {

@@ -1,0 +1,109 @@
+{
+    "settings": {
+        "analysis": {
+            "filter": {
+                "english_stop": {
+                    "type": "stop",
+                    "stopwords": [
+                        "a",
+                        "and",
+                        "are",
+                        "as",
+                        "at",
+                        "be",
+                        "but",
+                        "by",
+                        "for",
+                        "if",
+                        "in",
+                        "into",
+                        "is",
+                        "it",
+                        "no",
+                        "not",
+                        "of",
+                        "on",
+                        "or",
+                        "s",
+                        "such",
+                        "t",
+                        "that",
+                        "the",
+                        "their",
+                        "then",
+                        "there",
+                        "these",
+                        "they",
+                        "this",
+                        "to",
+                        "was",
+                        "will",
+                        "with",
+                        "www"
+                    ]
+                }
+            },
+            "analyzer": {
+                "rebuilt_cjk": {
+                    "tokenizer": "standard",
+                    "filter": [
+                        "cjk_width",
+                        "lowercase",
+                        "cjk_bigram",
+                        "english_stop"
+                    ]
+                }
+            }
+        }
+    },
+    "mappings": {
+        "properties": {
+            "uri": {
+                "type": "keyword"
+            },
+            "meta": {
+                "properties": {
+                    "ogimage": {
+                        "type": "text"
+                    },
+                    "title": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "description": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "keywords": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    }
+                }
+            },
+            "source": {
+                "properties": {
+                    "h1": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "h2": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "h3": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "h4": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    },
+                    "p": {
+                        "type": "text",
+                        "analyzer": "rebuilt_cjk"
+                    }
+                }
+            }
+        }
+    }
+}
