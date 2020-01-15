@@ -47,6 +47,7 @@ type CrawlRequest struct {
 	OnDomain bool   `json:"on_domain"`
 	Engine   string `json:"engine"`
 	Type     string `json:"type"`
+	Domain   string `json:"domain,omitempty"`
 }
 
 // Init initializes a new crawl
@@ -56,19 +57,12 @@ func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.Appsearc
 		return 400
 	}
 
-	domain := validURL.Hostname()
+	cr.Domain = validURL.Hostname()
+	cr.URL = validURL.String()
 
-	if cr.Type == "elasticsearch" {
-		go func(u string, d string, i string, e *elasticsearch.Client, l *logrus.Logger) {
-			ElasticCrawl(u, d, i, e, l)
-		}(validURL.String(), domain, cr.Index, elasticClient, logger)
-	}
-
-	if cr.Type == "app-search" {
-		go func(u string, d string, e string, a *clients.AppsearchClient, l *logrus.Logger) {
-			AppsearchCrawl(u, d, e, a, l)
-		}(validURL.String(), domain, cr.Engine, appsearchClient, logger)
-	}
+	go func(c CrawlRequest, e *elasticsearch.Client, a *clients.AppsearchClient, l *logrus.Logger) {
+		Crawl(c, e, a, l)
+	}(cr, elasticClient, appsearchClient, logger)
 
 	return 201
 }
@@ -77,53 +71,122 @@ func appendToSlice(sl *[]string, ml string) {
 	*sl = append(*sl, ml)
 }
 
-// ElasticCrawl does the crawling for Elasticsearch engines
-func ElasticCrawl(uri string, domain string, index string, elasticClient *elasticsearch.Client, logger *logrus.Logger) {
+// Crawl does the crawling for Elasticsearch engines
+func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.AppsearchClient, logger *logrus.Logger) {
 	c := colly.NewCollector(
-		colly.AllowedDomains(domain),
+		colly.AllowedDomains(cr.Domain),
 	)
 
-	// Callback for when a scraped page contains an article element
-	c.OnHTML("body", func(e *colly.HTMLElement) {
-		page := RenderedPage{
-			URI: e.Request.URL.String(),
-			Meta: Meta{
-				Title: e.DOM.Find("title").Text(),
-			},
-			Source: make(map[string][]string),
-		}
+	if cr.Type == "elasticsearch" {
+		// Callback for when a scraped page contains an article element
+		c.OnHTML("body", func(e *colly.HTMLElement) {
+			page := RenderedPage{
+				URI: e.Request.URL.String(),
+				Meta: Meta{
+					Title: e.DOM.Find("title").Text(),
+				},
+				Source: make(map[string][]string),
+			}
 
-		metaTags := e.DOM.ParentsUntil("~").Find("meta")
-		metaTags.Each(func(_ int, s *goquery.Selection) {
-			name, _ := s.Attr("name")
-			property, _ := s.Attr("property")
-			if strings.EqualFold(name, "description") {
-				content, _ := s.Attr("content")
-				page.Meta.Desc = content
+			metaTags := e.DOM.ParentsUntil("~").Find("meta")
+			metaTags.Each(func(_ int, s *goquery.Selection) {
+				name, _ := s.Attr("name")
+				property, _ := s.Attr("property")
+				if strings.EqualFold(name, "description") {
+					content, _ := s.Attr("content")
+					page.Meta.Desc = content
+				}
+				if strings.EqualFold(name, "keywords") {
+					content, _ := s.Attr("content")
+					page.Meta.Keywords = content
+				}
+				if strings.EqualFold(property, "og:image") {
+					content, _ := s.Attr("content")
+					page.Meta.OgImage = content
+				}
+			})
+
+			for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+				e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+					page.Source[el] = append(page.Source[el], s.Text())
+				})
 			}
-			if strings.EqualFold(name, "keywords") {
-				content, _ := s.Attr("content")
-				page.Meta.Keywords = content
+
+			doc, err := CreateElasticDocument(cr.Index, page)
+			if err != nil {
+				logger.Error(err)
 			}
-			if strings.EqualFold(property, "og:image") {
-				content, _ := s.Attr("content")
-				page.Meta.OgImage = content
+
+			errSlice := clients.IndexDocument(elasticClient, doc)
+
+			if len(errSlice) > 0 {
+				for _, e := range errSlice {
+					logger.Error(e)
+				}
 			}
 		})
+	}
 
-		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
-			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
-				page.Source[el] = append(page.Source[el], s.Text())
+	if cr.Type == "app-search" {
+		// Callback for when a scraped page contains an article element
+		c.OnHTML("body", func(e *colly.HTMLElement) {
+			idBytes := md5.Sum([]byte(e.Request.URL.String()))
+			idHash := hex.EncodeToString(idBytes[:])
+			page := clients.AppsearchDocument{
+				ID:     idHash,
+				URI:    e.Request.URL.String(),
+				Source: make(map[string][]string),
+				Title:  e.DOM.ParentsUntil("~").Find("title").Text(),
+			}
+
+			metaTags := e.DOM.ParentsUntil("~").Find("meta")
+			metaTags.Each(func(_ int, s *goquery.Selection) {
+				name, _ := s.Attr("name")
+				property, _ := s.Attr("property")
+				if strings.EqualFold(name, "description") {
+					content, _ := s.Attr("content")
+					page.Description = content
+				}
+				if strings.EqualFold(name, "keywords") {
+					content, _ := s.Attr("content")
+					page.Keywords = content
+				}
+				if strings.EqualFold(property, "og:image") {
+					content, _ := s.Attr("content")
+					page.OgImage = content
+				}
 			})
-		}
 
-		doc, err := CreateElasticDocument(index, page)
-		if err != nil {
-			logger.Error(err)
-		}
+			for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
+				e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
+					page.Source[el] = append(page.Source[el], s.Text())
+				})
+			}
 
-		clients.IndexDocument(elasticClient, doc, logger)
-	})
+			var bearer = "Bearer " + ac.Token
+			var endpoint = ac.Endpoint + ac.API + "engines/" + cr.Engine + "/documents"
+
+			bodyJSON, err := json.Marshal(page)
+			if err != nil {
+				logger.Error(err)
+			}
+
+			doc := bytes.NewReader(bodyJSON)
+
+			req, err := http.NewRequest("POST", endpoint, doc)
+			req.Header.Add("Authorization", bearer)
+			req.Header.Add("Content-Type", "application/json")
+
+			client := ac.Client
+
+			resp, err := client.Do(req)
+			if err != nil {
+				logger.Error(err)
+			}
+
+			logger.Infof("App-Search Response: %v", resp)
+		})
+	}
 
 	// Callback for links on scraped pages
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
@@ -140,90 +203,7 @@ func ElasticCrawl(uri string, domain string, index string, elasticClient *elasti
 		logger.Infof("Visiting: %s", r.URL.String())
 	})
 
-	c.Visit(uri)
-}
-
-// AppsearchCrawl does the crawling for app-search engines
-func AppsearchCrawl(uri string, domain string, engine string, ac *clients.AppsearchClient, logger *logrus.Logger) {
-	c := colly.NewCollector(
-		colly.AllowedDomains(domain),
-	)
-
-	// Callback for when a scraped page contains an article element
-	c.OnHTML("body", func(e *colly.HTMLElement) {
-		idBytes := md5.Sum([]byte(e.Request.URL.String()))
-		idHash := hex.EncodeToString(idBytes[:])
-		page := clients.AppsearchDocument{
-			ID:     idHash,
-			URI:    e.Request.URL.String(),
-			Source: make(map[string][]string),
-			Title:  e.DOM.ParentsUntil("~").Find("title").Text(),
-		}
-
-		metaTags := e.DOM.ParentsUntil("~").Find("meta")
-		metaTags.Each(func(_ int, s *goquery.Selection) {
-			name, _ := s.Attr("name")
-			property, _ := s.Attr("property")
-			if strings.EqualFold(name, "description") {
-				content, _ := s.Attr("content")
-				page.Description = content
-			}
-			if strings.EqualFold(name, "keywords") {
-				content, _ := s.Attr("content")
-				page.Keywords = content
-			}
-			if strings.EqualFold(property, "og:image") {
-				content, _ := s.Attr("content")
-				page.OgImage = content
-			}
-		})
-
-		for _, el := range []string{"h1", "h2", "h3", "h4", "p"} {
-			e.DOM.Find(el).Each(func(_ int, s *goquery.Selection) {
-				page.Source[el] = append(page.Source[el], s.Text())
-			})
-		}
-
-		var bearer = "Bearer " + ac.Token
-		var endpoint = ac.Endpoint + ac.API + "engines/" + engine + "/documents"
-
-		bodyJSON, err := json.Marshal(page)
-		if err != nil {
-			logger.Error(err)
-		}
-
-		doc := bytes.NewReader(bodyJSON)
-
-		req, err := http.NewRequest("POST", endpoint, doc)
-		req.Header.Add("Authorization", bearer)
-		req.Header.Add("Content-Type", "application/json")
-
-		client := ac.Client
-
-		resp, err := client.Do(req)
-		if err != nil {
-			logger.Error(err)
-		}
-
-		logger.Infof("App-Search Response: %v", resp)
-	})
-
-	// Callback for links on scraped pages
-	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-		link := e.Attr("href")
-		c.Visit(e.Request.AbsoluteURL(link))
-	})
-
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		RandomDelay: 1 * time.Second,
-	})
-
-	c.OnRequest(func(r *colly.Request) {
-		logger.Infof("Visiting: %s", r.URL.String())
-	})
-
-	c.Visit(uri)
+	c.Visit(cr.URL)
 }
 
 func fixURL(href, base string) (URL string, err error) {

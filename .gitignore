@@ -2,4 +2,4 @@
 /reports
 
 .scannerwork
-conf/*.yml
+conf/local.yml
