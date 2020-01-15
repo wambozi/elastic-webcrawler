@@ -46,7 +46,17 @@ func GetEnvironment() string {
 
 //Setup provides application configuration info
 func Setup(env string) (*Configuration, error) {
-	viper.SetConfigName(env)
+	//default config name (that does not exist) to intentionally cause errors on startup if config file not found
+	viper.SetConfigName("no-config-set")
+
+	if env == "local" {
+		viper.SetConfigName("local")
+	}
+
+	// used for unit testing
+	if env == "test" {
+		viper.SetConfigName("test")
+	}
 
 	//needed when built at ./cmd/github.com/wambozi/elastic-webcrawler/
 	viper.AddConfigPath("../../conf/")

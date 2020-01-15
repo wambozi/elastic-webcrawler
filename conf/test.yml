@@ -1,0 +1,13 @@
+elasticsearch:
+  endpoint: http://localhost:9200
+  password: changeme
+  username: elastic
+
+appsearch:
+  endpoint: http://localhost:3002
+  api: /api/as/v1/
+  token: private-somefakek3y
+
+server:
+  port: 8081
+  readHeaderTimeoutMillis: 3000
