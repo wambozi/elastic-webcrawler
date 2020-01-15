@@ -51,7 +51,7 @@ type CrawlRequest struct {
 }
 
 // Init initializes a new crawl
-func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.AppsearchClient, cr *CrawlRequest, logger *logrus.Logger) (statusCode int) {
+func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.AppsearchClient, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
 	validURL, err := url.ParseRequestURI(cr.URL)
 	if err != nil {
 		return 400
@@ -60,7 +60,7 @@ func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.Appsearc
 	cr.Domain = validURL.Hostname()
 	cr.URL = validURL.String()
 
-	go func(c *CrawlRequest, e *elasticsearch.Client, a *clients.AppsearchClient, l *logrus.Logger) {
+	go func(c CrawlRequest, e *elasticsearch.Client, a *clients.AppsearchClient, l *logrus.Logger) {
 		Crawl(c, e, a, l)
 	}(cr, elasticClient, appsearchClient, logger)
 
@@ -72,7 +72,7 @@ func appendToSlice(sl *[]string, ml string) {
 }
 
 // Crawl does the crawling for Elasticsearch engines
-func Crawl(cr *CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.AppsearchClient, logger *logrus.Logger) {
+func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.AppsearchClient, logger *logrus.Logger) {
 	c := colly.NewCollector(
 		colly.AllowedDomains(cr.Domain),
 	)
@@ -117,12 +117,16 @@ func Crawl(cr *CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.Ap
 				logger.Error(err)
 			}
 
-			errSlice := clients.IndexDocument(elasticClient, doc)
+			response, errSlice := clients.IndexDocument(elasticClient, doc)
 
 			if len(errSlice) > 0 {
 				for _, e := range errSlice {
 					logger.Error(e)
 				}
+			}
+
+			for _, r := range response {
+				logger.Info(r)
 			}
 		})
 	}
