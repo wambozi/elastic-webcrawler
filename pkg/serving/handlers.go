@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/logger"
+	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
 )
 
@@ -21,33 +23,57 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
+func bodyValidator(w http.ResponseWriter, r *http.Request, l *logrus.Logger) (writer http.ResponseWriter, b *crawler.CrawlRequest) {
+	err := json.NewDecoder(r.Body).Decode(&b)
+	if err != nil {
+		logger.Error(err)
+		er := errorResponse{Error: err.Error()}
+		ers, _ := json.Marshal(er)
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(ers)
+		return w, nil
+	}
+
+	if b.Type != "app-search" && b.Type != "elasticsearch" {
+		eMessage := fmt.Sprintf("Crawl type of: %s is not supported. Must be 'app-search' or 'elasticsearch'", b.Type)
+		err := errorResponse{Error: eMessage}
+		ers, _ := json.Marshal(err)
+
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(ers)
+		return w, nil
+	}
+
+	if b.Type == "app-search" && b.Engine == "" {
+		eMessage := fmt.Sprint("Crawl type of 'app-search' requires an 'engine' in the request.")
+		err := errorResponse{Error: eMessage}
+		ers, _ := json.Marshal(err)
+
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(ers)
+		return w, nil
+	}
+
+	if b.Type == "elasticsearch" && b.Index == "" {
+		eMessage := fmt.Sprint("Crawl type of 'elasticsearch' requires an 'index' in the request.")
+		err := errorResponse{Error: eMessage}
+		ers, _ := json.Marshal(err)
+
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(ers)
+		return w, nil
+	}
+
+	return w, b
+}
+
 func (s *Server) handleCrawl() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var b crawler.CrawlRequest
 		w.Header().Set("Content-Type", "application/json")
 
-		err := json.NewDecoder(r.Body).Decode(&b)
-		if err != nil {
-			s.Log.Error(err)
-			er := errorResponse{Error: err.Error()}
-			ers, _ := json.Marshal(er)
-
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write(ers)
-			return
-		}
-
-		if b.Type != "app-search" && b.Type != "elasticsearch" {
-			err := errorResponse{Error: fmt.Sprintf("Crawl type of: %s is not supported. Must be 'app-search' or 'elasticsearch'", b.Type)}
-			ers, _ := json.Marshal(err)
-
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(ers)
-			return
-		}
-
+		w, b := bodyValidator(w, r, s.Log)
 		status := crawler.Init(s.ElasticClient, s.AppsearchClient, b, s.Log)
-
 		res := Response{}
 
 		if b.Type == "elasticsearch" {

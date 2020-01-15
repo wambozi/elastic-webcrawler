@@ -12,7 +12,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gocolly/colly v1.2.0
 	github.com/google/go-cmp v0.2.0
-	github.com/google/logger v1.0.1 // indirect
+	github.com/google/logger v1.0.1
 	github.com/gookit/color v1.2.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kennygrant/sanitize v1.2.4 // indirect
