@@ -52,14 +52,6 @@ github.com/elastic/go-elasticsearch/v8/estransport
 github.com/elastic/go-elasticsearch/v8/internal/version
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
-# github.com/go-redis/redis v6.15.6+incompatible
-github.com/go-redis/redis
-github.com/go-redis/redis/internal
-github.com/go-redis/redis/internal/consistenthash
-github.com/go-redis/redis/internal/hashtag
-github.com/go-redis/redis/internal/pool
-github.com/go-redis/redis/internal/proto
-github.com/go-redis/redis/internal/util
 # github.com/gobwas/glob v0.2.3
 github.com/gobwas/glob
 github.com/gobwas/glob/compiler
@@ -77,6 +69,8 @@ github.com/gocolly/colly/storage
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
+# github.com/gookit/color v1.2.1
+github.com/gookit/color
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -92,8 +86,6 @@ github.com/hashicorp/hcl/json/token
 github.com/jmespath/go-jmespath
 # github.com/julienschmidt/httprouter v1.3.0
 github.com/julienschmidt/httprouter
-# github.com/kataras/go-events v0.0.2
-github.com/kataras/go-events
 # github.com/kennygrant/sanitize v1.2.4
 github.com/kennygrant/sanitize
 # github.com/konsorten/go-windows-terminal-sequences v1.0.1

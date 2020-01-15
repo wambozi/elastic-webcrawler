@@ -205,7 +205,7 @@ func AppsearchCrawl(uri string, domain string, engine string, ac *clients.Appsea
 			logger.Error(err)
 		}
 
-		logger.Infof("App-Search Response: %s", resp)
+		logger.Infof("App-Search Response: %v", resp)
 	})
 
 	// Callback for links on scraped pages
