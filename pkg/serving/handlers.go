@@ -51,11 +51,11 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 		res := Response{}
 
 		if b.Type == "elasticsearch" {
-			res = Response{Status: status, URL: b.URL, Index: b.Index}
+			res = Response{Status: status, URL: b.URL, Type: "elasticsearch", Index: b.Index}
 		}
 
 		if b.Type == "app-search" {
-			res = Response{Status: status, URL: b.URL, Engine: b.Engine}
+			res = Response{Status: status, URL: b.URL, Type: "app-search", Engine: b.Engine}
 		}
 
 		response, err := json.Marshal(res)
