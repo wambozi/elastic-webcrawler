@@ -21,7 +21,7 @@ clean:
 .PHONY: compile
 compile:
 	go env -w GOPRIVATE=github.com/wambozi/*
-	export GOFLAGS="-mod=vendor"
+	go mod vendor
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o ${OUT} -ldflags="-extldflags \"-static\"" ./cmd/elastic-webcrawler/main.go
 
 .PHONY: format

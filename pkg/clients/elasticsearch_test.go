@@ -75,7 +75,7 @@ func TestIndexDocument(t *testing.T) {
 		Body:       r,
 	}
 
-	errSlice := IndexDocument(client, doc)
+	_, errSlice := IndexDocument(client, doc)
 
 	if len(errSlice) > 0 {
 		t.Errorf("Unexpected error indexing documents: %v", errSlice)
