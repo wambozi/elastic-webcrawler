@@ -50,7 +50,7 @@ func CreateElasticClient(cfg elasticsearch.Config) (client *elasticsearch.Client
 }
 
 // IndexDocument takes a document and indexes it in Elasticsearch
-func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument) []error {
+func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument) (resSlice []string, errSlice []error) {
 	var (
 		r  map[string]interface{}
 		wg sync.WaitGroup
@@ -58,7 +58,8 @@ func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument) []err
 
 	wg.Add(1)
 
-	errSlice := []error{}
+	errSlice = []error{}
+	resSlice = []string{}
 
 	go func(d ElasticDocument) {
 		defer wg.Done()
@@ -87,10 +88,11 @@ func IndexDocument(elasticClient *elasticsearch.Client, d ElasticDocument) []err
 			if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 				errSlice = append(errSlice, fmt.Errorf("Error deserializing the response object: %s", err))
 			} else {
-				errSlice = append(errSlice, fmt.Errorf("[%s] %s; version=%d; id=%s", res.Status(), r["result"], int(r["_version"].(float64)), d.DocumentID))
+				resSlice = append(resSlice, fmt.Sprintf("[%s] %s; version=%d; id=%s", res.Status(), r["result"], int(r["_version"].(float64)), d.DocumentID))
 			}
 		}
 	}(d)
+	wg.Wait()
 
-	return errSlice
+	return resSlice, errSlice
 }

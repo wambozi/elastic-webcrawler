@@ -117,12 +117,16 @@ func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.App
 				logger.Error(err)
 			}
 
-			errSlice := clients.IndexDocument(elasticClient, doc)
+			response, errSlice := clients.IndexDocument(elasticClient, doc)
 
 			if len(errSlice) > 0 {
 				for _, e := range errSlice {
 					logger.Error(e)
 				}
+			}
+
+			for _, r := range response {
+				logger.Info(r)
 			}
 		})
 	}
