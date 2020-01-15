@@ -1,5 +1,6 @@
 /bin
 /reports
+/vendor
 
 .scannerwork
 conf/local.yml

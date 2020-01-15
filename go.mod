@@ -7,12 +7,12 @@ require (
 	github.com/antchfx/htmlquery v1.2.1 // indirect
 	github.com/antchfx/xmlquery v1.2.2 // indirect
 	github.com/antchfx/xpath v1.1.4 // indirect
-	github.com/aws/aws-sdk-go v1.27.2
+	github.com/aws/aws-sdk-go v1.27.2 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20191218082911-5398a82b748f
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gocolly/colly v1.2.0
 	github.com/google/go-cmp v0.2.0
-	github.com/google/logger v1.0.1
+	github.com/google/logger v1.0.1 // indirect
 	github.com/gookit/color v1.2.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kennygrant/sanitize v1.2.4 // indirect
