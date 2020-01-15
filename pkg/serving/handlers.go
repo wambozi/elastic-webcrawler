@@ -10,8 +10,11 @@ import (
 
 // Response is a concrete representation of the response to the client calling the crawl
 type Response struct {
-	Status  int    `json:"status"`
-	Message string `json:"url"`
+	Status int    `json:"status"`
+	URL    string `json:"url"`
+	Type   string `json:"type"`
+	Index  string `json:"index,omitempty"`
+	Engine string `json:"engine,omitempty"`
 }
 
 type errorResponse struct {
@@ -34,9 +37,27 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			return
 		}
 
+		if b.Type != "app-search" && b.Type != "elasticsearch" {
+			err := errorResponse{Error: fmt.Sprintf("Crawl type of: %s is not supported. Must be 'app-search' or 'elasticsearch'", b.Type)}
+			ers, _ := json.Marshal(err)
+
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(ers)
+			return
+		}
+
 		status := crawler.Init(s.ElasticClient, s.AppsearchClient, b, s.Log)
 
-		res := Response{Status: status, Message: b.URL}
+		res := Response{}
+
+		if b.Type == "elasticsearch" {
+			res = Response{Status: status, URL: b.URL, Type: "elasticsearch", Index: b.Index}
+		}
+
+		if b.Type == "app-search" {
+			res = Response{Status: status, URL: b.URL, Type: "app-search", Engine: b.Engine}
+		}
+
 		response, err := json.Marshal(res)
 		if err != nil {
 			es := fmt.Sprintf("Failed to marshal %+v", res)
@@ -47,6 +68,7 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			w.Write(ers)
 			return
 		}
+
 		w.WriteHeader(http.StatusAccepted)
 		w.Write(response)
 	}

@@ -40,12 +40,23 @@ server:
 
 ### `POST /crawl`
 
-Example POST body:
+Example POST body for an Elasticsearch crawl:
 
 ```JSON
 {
     "index": "demo",
-    "url": "http://www.google.com"
+    "url": "http://www.example.com",
+    "type": "elasticsearch"
+}
+```
+
+Example POST body for an AppSearch crawl:
+
+```JSON
+{
+    "engine": "demo",
+    "url": "http://www.example.com",
+    "type": "app-search"
 }
 ```
 
@@ -54,7 +65,7 @@ Example response:
 ```JSON
 {
     "status": 201,
-    "url": "http://www.google.com"
+    "url": "http://www.example.com"
 }
 ```
 
