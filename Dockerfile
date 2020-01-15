@@ -9,7 +9,7 @@ RUN addgroup -S elastic && adduser -S elastic -G elastic
 COPY --chown=elastic:elastic ./bin/elastic-webcrawler /opt/bin/elastic-webcrawler
 COPY --chown=elastic:elastic ./conf /opt/bin/conf
 
-RUN chmod -R 755 /opt/bin/conf/* && ls -lta /opt/bin/conf
+RUN chmod -R 755 /opt/bin/conf/*
 
 USER elastic
 
