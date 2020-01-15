@@ -69,7 +69,10 @@ lint:
 sonar:
 	gitlab-sonar-scanner -Dsonar.login=${SONAR_USER_TOKEN}
 
-.PHONY: docker-build
-docker-build: compile
-	docker build --build-arg "ENV_ID=local" -t wambozi/elastic-webcrawler:${VERSION} .
-	docker tag wambozi/elastic-webcrawler:${VERSION} wambozi/elastic-webcrawler:latest
+.PHONY: publish
+publish: compile
+	docker login --username wambozi --password ${DOCKER_TOKEN}
+	docker build -t wambozi/elastic-search-api:${VERSION} .
+	docker tag wambozi/elastic-search-api:${VERSION} wambozi/elastic-search-api:latest
+	docker push wambozi/elastic-search-api:${VERSION}
+	docker push wambozi/elastic-search-api:latest

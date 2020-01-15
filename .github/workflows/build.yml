@@ -27,6 +27,12 @@ jobs:
 
       - name: Test
         run: make test-runner
+      
+      - name: Publish
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          make publish
 
       ## TODO: add compile and deploy stages
 
