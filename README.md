@@ -40,7 +40,7 @@ server:
 
 ## Usage
 
-### Running on Local
+### Running Local
 
 Steps:
 
@@ -49,9 +49,9 @@ Steps:
 
 ```yaml
 elasticsearch:
-  endpoint: http://docker.for.mac.localhost:9200
+  endpoint: http://localhost:9200
 appsearch:
-  endpoint: http://docker.for.mac.localhost:3002
+  endpoint: http://localhost:3002
   api: /api/as/v1/
   token: private-xxxxxxxxxxxxxxx
 server:
