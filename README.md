@@ -52,7 +52,7 @@ To run the binary locally:
 
 ### Docker
 
-This project builds and publishes a container with two tags, `latest` and `commit_hash`, to Docker Hub on merge to master. Currently, you have to mount a volume with your config to run it.
+This project builds and publishes a container with two tags, `latest` and `commit_hash`, to Docker Hub on merge to master.
 
 Docker Hub: [https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler](https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler)
 
