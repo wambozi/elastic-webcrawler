@@ -31,7 +31,7 @@ elasticsearch:
 appsearch:
   endpoint: http://localhost:3002
   api: /api/as/v1/
-  token: private-pq7aaoSDFapSADosdnfns
+  token: private-xxxxxxxxxxxxxxxxx
 
 server:
   port: 8081
@@ -40,12 +40,13 @@ server:
 
 ## Usage
 
-### Local
+### Running on Local
 
 To run the binary locally:
 
 - install vendor dependencies: `go mod vendor`
-- create an env config in `/conf` (example above)
+- export env ID: `export ENV_ID=local`
+- create an env config in `/conf` (example above). The name of this config should match the value of the env ID exported.
 - compile (required to run the binary locally): `GO_ENABLED=0 go build -mod vendor -o ./bin/elastic-webcrawler ./cmd/elastic-webcrawler/main.go`
 - run the compiled binary: `./bin/elastic-webcrawler`
 
@@ -55,11 +56,43 @@ This project builds and publishes a container with two tags, `latest` and `commi
 
 Docker Hub: [https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler](https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler)
 
-To run:
+Steps:
+
+1. Launch App Search and Elasticsearch
+2. Create a local config file:
+
+```yaml
+elasticsearch:
+  endpoint: http://docker.for.mac.localhost:9200
+appsearch:
+  endpoint: http://docker.for.mac.localhost:3002
+  api: /api/as/v1/
+  token: private-xxxxxxxxxxxxxxx
+server:
+  port: 8081
+  readHeaderTimeoutMillis: 3000
+```
+
+3. Run the container.
 
 ```shell
 docker pull wambozi/elastic-webcrawler:latest
-docker run --rm -it -e "ENV_ID=local" -v "/some/path/conf:/conf" -p 8081:8081 wambozi/elastic-webcrawler:latest 
+docker run --rm -it -e "ENV_ID=local" -v "/some/path/to/conf:/conf" -p 8081:8081 wambozi/elastic-webcrawler:latest 
+```
+
+- `-v` : Mount the current dir into /conf dir of the container (so it makes local.yml accessible here). [Using bind mounts in docker](https://docs.docker.com/storage/bind-mounts/)
+- `-e`: Required to specify the name of the env file. If `ENV_ID=local` isn't passed into the container, the container will exit with: `error: Error reading config file: Config File "no-config-set" Not Found in "[/conf /opt/bin/conf /opt/bin]"`
+- `-p` expose the webserver port. This port should correspond to the value for `server.port` in your config.
+
+4. If using App Search, [create the engine](https://swiftype.com/documentation/app-search/getting-started#engine) in App Search (API doesn't create it for you).
+5. Launch a crawl:
+
+```shell
+curl -XPOST localhost:8081/crawl -d '{
+    "engine": "swiftype-website",
+    "url": "https://swiftype.com/",
+    "type": "app-search"
+}'
 ```
 
 ### `POST /crawl`
