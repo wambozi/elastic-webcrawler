@@ -42,15 +42,40 @@ server:
 
 ### Running on Local
 
-To run the binary locally:
+Steps:
 
-- install vendor dependencies: `go mod vendor`
-- export env ID: `export ENV_ID=local`
-- create an env config in `/conf` (example above). The name of this config should match the value of the env ID exported.
-- compile (required to run the binary locally): `GO_ENABLED=0 go build -mod vendor -o ./bin/elastic-webcrawler ./cmd/elastic-webcrawler/main.go`
-- run the compiled binary: `./bin/elastic-webcrawler`
+1. Launch App Search and Elasticsearch
+2. Create a local config file:
 
-### Docker
+```yaml
+elasticsearch:
+  endpoint: http://docker.for.mac.localhost:9200
+appsearch:
+  endpoint: http://docker.for.mac.localhost:3002
+  api: /api/as/v1/
+  token: private-xxxxxxxxxxxxxxx
+server:
+  port: 8081
+  readHeaderTimeoutMillis: 3000
+```
+
+3. Install vendor dependencies: `go mod vendor`
+4. Export env ID: `export ENV_ID=local`
+5. Create an env config in `/conf` (example above). The name of this config should match the value of the env ID exported.
+6. Compile (required to run the binary locally): `GO_ENABLED=0 go build -mod vendor -o ./bin/elastic-webcrawler ./cmd/elastic-webcrawler/main.go`
+7. Run the compiled binary: `./bin/elastic-webcrawler`
+8. If using App Search, [create the engine](https://swiftype.com/documentation/app-search/getting-started#engine) in App Search (API doesn't create it for you).
+9. Launch a crawl:
+
+```shell
+curl -XPOST localhost:8081/crawl -d '{
+    "engine": "swiftype-website",
+    "url": "https://swiftype.com/",
+    "type": "app-search"
+}'
+```
+
+### Running with Docker
 
 This project builds and publishes a container with two tags, `latest` and `commit_hash`, to Docker Hub on merge to master.
 
