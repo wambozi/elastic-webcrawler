@@ -38,6 +38,30 @@ server:
   readHeaderTimeoutMillis: 3000
 ```
 
+## Usage
+
+### Local
+
+To run the binary locally:
+
+- install vendor dependencies: `go mod vendor`
+- create an env config in `/conf` (example above)
+- compile (required to run the binary locally): `GO_ENABLED=0 go build -mod vendor -o ./bin/elastic-webcrawler ./cmd/elastic-webcrawler/main.go`
+- run the compiled binary: `./bin/elastic-webcrawler`
+
+### Docker
+
+This project builds and publishes a container with two tags, `latest` and `commit_hash`, to Docker Hub on merge to master. Currently, you have to mount a volume with your config to run it.
+
+Docker Hub: [https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler](https://hub.docker.com/repository/docker/wambozi/elastic-webcrawler)
+
+To run:
+
+```shell
+docker pull wambozi/elastic-webcrawler:latest
+docker run --rm -it -e "ENV_ID=local" -v "/some/path/conf:/conf" -p 8081:8081 wambozi/elastic-webcrawler:latest 
+```
+
 ### `POST /crawl`
 
 Example POST body for an Elasticsearch crawl:
