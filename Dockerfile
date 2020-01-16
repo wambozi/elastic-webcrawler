@@ -1,7 +1,5 @@
 FROM golang:1.13.5-alpine3.11
 
-ARG ENV_ID
-
 RUN apk --update add bash
 
 RUN addgroup -S elastic && adduser -S elastic -G elastic
