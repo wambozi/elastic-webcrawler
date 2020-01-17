@@ -124,8 +124,8 @@ server:
 4. Run the container. The `docker run` command doesn't need to specify the docker network, as long as we put the subnet for the bridge network in our `local.yml`
 
 ```shell
-docker run -d --name elastic --network=bridge -it -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:7.5.1
-docker run -d --name app-search --network=bridge -it -p 3002:3002 -e allow_es_settings_modification=true docker.elastic.co/app-search/app-search:7.5.1
+docker run -d --name elastic --network=bridge -it -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "action.auto_create_index=.app-search-*-logs-*,-.app-search-*,+*" docker.elastic.co/elasticsearch/elasticsearch:7.5.1
+docker run -d --name app-search --network=bridge -it -p 3002:3002 -e "allow_es_settings_modification=true" docker.elastic.co/app-search/app-search:7.5.1
 docker run --rm --name webcrawler -it -e "ENV_ID=local" -v "$(pwd)/conf:/conf" -p 8081:8081 wambozi/elastic-webcrawler:latest
 ```
 
@@ -146,6 +146,11 @@ curl -XPOST localhost:8081/crawl -d '{
     "type": "app-search"
 }'
 ```
+
+### Run using Makefile
+
+- To run the docker container locally with elasticsearch and app-search, using make: `make run-local`
+  - This runs the `docker run` commands above and checks that Elasticsearch is healthy
 
 ### `POST /crawl`
 
