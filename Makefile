@@ -66,7 +66,7 @@ test-runner: clean-test
 		printf '.' ; \
 		sleep 5 ; \
 	done
-	docker run -it -d --network testing --ip 172.18.0.2 --name app-search-test -p 3002:3002 -e "elasticsearch.host=$$ELASTICSEARCH_ENDPOINT" docker.elastic.co/app-search/app-search:${ELASTIC_VERSION}
+	docker run -it -d --network testing --ip 172.18.0.3 --name app-search-test -p 3002:3002 -e "elasticsearch.host=$$ELASTICSEARCH_ENDPOINT" docker.elastic.co/app-search/app-search:${ELASTIC_VERSION}
 	curl  -H "Content-Type:application/json" -XPUT $$ELASTICSEARCH_ENDPOINT/test/_doc/1234 -d '{ "title" : "test", "post_date" : "2009-11-15T14:12:12", "message" : "testing out Elasticsearch" }'
 	go test --coverprofile=reports/cov.out $$(go list ./... | grep -v /vendor/)
 	go tool cover -func=reports/cov.out
