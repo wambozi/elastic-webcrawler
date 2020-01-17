@@ -19,7 +19,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          make dependencies
+          make runner-deps
 
       - name: Test
         run: |
