@@ -136,14 +136,25 @@ docker run --rm --name webcrawler -it -e "ENV_ID=local" -v "$(pwd)/conf:/conf" -
 - `-e`: Required to specify the name of the env file. If `ENV_ID=local` isn't passed into the container, the container will exit with: `ERRO[0000] stdErr: &{file:0xc0000980c0} , error: Error reading config file. env: nick error: Config File "prod" Not Found in "[/conf /opt/bin/conf /opt/bin]"`. The value of `ENV_ID` should be the name of the file being used.
 - `-p` expose the webserver port. This port should correspond to the value for `server.port` in your config.
 
-1. If using App Search, [create the engine](https://swiftype.com/documentation/app-search/getting-started#engine) in App Search (API doesn't create it for you).
-2. Launch a crawl:
+5. If using App Search, [create the engine](https://swiftype.com/documentation/app-search/getting-started#engine) in App Search (API doesn't create it for you).
+6. Launch a crawl:
+  - Elasticsearch Crawl:
 
 ```shell
 curl -XPOST localhost:8081/crawl -d '{
     "engine": "example-website",
     "url": "https://example.com/",
     "type": "app-search"
+}'
+```
+
+  - App Search Crawl:
+
+```shell
+curl -XPOST localhost:8081/crawl -d '{
+    "index": "example-website",
+    "url": "https://example.com/",
+    "type": "elasticsearch"
 }'
 ```
 

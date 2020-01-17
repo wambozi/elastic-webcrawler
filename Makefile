@@ -61,12 +61,12 @@ test-runner: export ELASTICSEARCH_ENDPOINT=http://172.18.0.2:9200
 test-runner: clean-test
 	[ -d reports ] || mkdir reports
 	docker network create testing --subnet=172.18.0.0/16 --gateway=172.18.0.1
-	docker run -it --network testing --ip 172.18.0.2 -d --name elastic-test -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "action.auto_create_index=.app-search-*-logs-*,-.app-search-*,+*" docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+	docker run -it -d --network testing --ip 172.18.0.2 --name elastic-test -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "action.auto_create_index=.app-search-*-logs-*,-.app-search-*,+*" docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
 	until $$(curl --output /dev/null --silent --head --fail $$ELASTICSEARCH_ENDPOINT); do \
 		printf '.' ; \
 		sleep 5 ; \
 	done
-	docker run -d --network testing --ip 172.18.0.2 --name app-search-test --network=testing -it -p 3002:3002 -e "elasticsearch.host=$$ELASTICSEARCH_ENDPOINT" docker.elastic.co/app-search/app-search:${ELASTIC_VERSION}
+	docker run -it -d --network testing --ip 172.18.0.2 --name app-search-test -p 3002:3002 -e "elasticsearch.host=$$ELASTICSEARCH_ENDPOINT" docker.elastic.co/app-search/app-search:${ELASTIC_VERSION}
 	curl  -H "Content-Type:application/json" -XPUT $$ELASTICSEARCH_ENDPOINT/test/_doc/1234 -d '{ "title" : "test", "post_date" : "2009-11-15T14:12:12", "message" : "testing out Elasticsearch" }'
 	go test --coverprofile=reports/cov.out $$(go list ./... | grep -v /vendor/)
 	go tool cover -func=reports/cov.out
