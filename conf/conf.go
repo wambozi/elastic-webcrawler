@@ -47,16 +47,7 @@ func GetEnvironment() string {
 //Setup provides application configuration info
 func Setup(env string) (*Configuration, error) {
 	//default config name (that does not exist) to intentionally cause errors on startup if config file not found
-	viper.SetConfigName("no-config-set")
-
-	if env == "local" {
-		viper.SetConfigName("local")
-	}
-
-	// used for unit testing
-	if env == "test" {
-		viper.SetConfigName("test")
-	}
+	viper.SetConfigName(env)
 
 	//needed when built at ./cmd/github.com/wambozi/elastic-webcrawler/
 	viper.AddConfigPath("../../conf/")
@@ -68,11 +59,11 @@ func Setup(env string) (*Configuration, error) {
 	var configs Configuration
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("Error reading config file: %w", err)
+		return nil, fmt.Errorf("Error reading config file. env: %s error: %w", env, err)
 	}
 	err := viper.Unmarshal(&configs)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to unmarshal into struct: %w", err)
+		return nil, fmt.Errorf("Unable to unmarshal into struct. env: %s error: %w", env, err)
 	}
 
 	return &configs, nil

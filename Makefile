@@ -16,7 +16,14 @@ clean:
 	for network in $$(docker network ls | grep testing | awk '{print $$1}'); do \
 		docker network rm $$network; \
 	done
-	
+
+.PHONY: dependencies
+dependencies:
+	go get -v -t -d ./...
+	if [ -f Gopkg.toml ]; then \
+		curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh \
+		dep ensure \
+	fi
 
 .PHONY: compile
 compile:
@@ -69,10 +76,13 @@ lint:
 sonar:
 	gitlab-sonar-scanner -Dsonar.login=${SONAR_USER_TOKEN}
 
+.PHONY: build
+build: compile
+	docker build -t wambozi/elastic-webcrawler:${VERSION} .
+	docker tag wambozi/elastic-webcrawler:${VERSION} wambozi/elastic-webcrawler:latest
+
 .PHONY: publish
 publish: compile
 	docker login --username wambozi --password ${DOCKER_TOKEN}
-	docker build -t wambozi/elastic-webcrawler:${VERSION} .
-	docker tag wambozi/elastic-webcrawler:${VERSION} wambozi/elastic-webcrawler:latest
 	docker push wambozi/elastic-webcrawler:${VERSION}
 	docker push wambozi/elastic-webcrawler:latest
