@@ -42,8 +42,7 @@ func TestSetup(t *testing.T) {
 					Password: "changeme",
 				},
 			}, errMsg: ""},
-		"incorrect env": {env: "other", conf: nil, errMsg: "Error reading config file: Config File \"no-config-set\" Not"},
-		"no env":        {env: "", conf: nil, errMsg: "Error reading config file: Config File \"no-config-set\" Not"},
+		"incorrect env": {env: "other", conf: nil, errMsg: "Error reading config file. env: other error: Config File \"other\" Not"},
 	}
 
 	for name, tc := range tests {
