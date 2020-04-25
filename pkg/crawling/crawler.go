@@ -1,4 +1,4 @@
-package crawler
+package crawling
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gocolly/colly"
 	"github.com/sirupsen/logrus"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
 )
 
 // Retries represents the Error retries for Crawler requests
@@ -51,7 +51,7 @@ type CrawlRequest struct {
 }
 
 // Init initializes a new crawl
-func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.AppsearchClient, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
+func Init(elasticClient *elasticsearch.Client, appsearchClient *connecting.AppsearchClient, cr CrawlRequest, logger *logrus.Logger) (statusCode int) {
 	validURL, err := url.ParseRequestURI(cr.URL)
 	if err != nil {
 		return 400
@@ -60,7 +60,7 @@ func Init(elasticClient *elasticsearch.Client, appsearchClient *clients.Appsearc
 	cr.Domain = validURL.Hostname()
 	cr.URL = validURL.String()
 
-	go func(c CrawlRequest, e *elasticsearch.Client, a *clients.AppsearchClient, l *logrus.Logger) {
+	go func(c CrawlRequest, e *elasticsearch.Client, a *connecting.AppsearchClient, l *logrus.Logger) {
 		Crawl(c, e, a, l)
 	}(cr, elasticClient, appsearchClient, logger)
 
@@ -72,7 +72,7 @@ func appendToSlice(sl *[]string, ml string) {
 }
 
 // Crawl does the crawling for Elasticsearch engines
-func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.AppsearchClient, logger *logrus.Logger) {
+func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *connecting.AppsearchClient, logger *logrus.Logger) {
 	c := colly.NewCollector(
 		colly.AllowedDomains(cr.Domain),
 	)
@@ -117,7 +117,7 @@ func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.App
 				logger.Error(err)
 			}
 
-			response, errSlice := clients.IndexDocument(elasticClient, doc)
+			response, errSlice := connecting.IndexDocument(elasticClient, doc)
 
 			if len(errSlice) > 0 {
 				for _, e := range errSlice {
@@ -136,7 +136,7 @@ func Crawl(cr CrawlRequest, elasticClient *elasticsearch.Client, ac *clients.App
 		c.OnHTML("body", func(e *colly.HTMLElement) {
 			idBytes := md5.Sum([]byte(e.Request.URL.String()))
 			idHash := hex.EncodeToString(idBytes[:])
-			page := clients.AppsearchDocument{
+			page := connecting.AppsearchDocument{
 				ID:     idHash,
 				URI:    e.Request.URL.String(),
 				Source: make(map[string][]string),
@@ -224,7 +224,7 @@ func fixURL(href, base string) (URL string, err error) {
 }
 
 // CreateElasticDocument returns the document to be indexed in Elasticsearch or an error
-func CreateElasticDocument(i string, p RenderedPage) (doc clients.ElasticDocument, err error) {
+func CreateElasticDocument(i string, p RenderedPage) (doc connecting.ElasticDocument, err error) {
 	idBytes := md5.Sum([]byte(p.URI))
 	idHash := hex.EncodeToString(idBytes[:])
 	bodyJSON, err := json.Marshal(p)
@@ -232,7 +232,7 @@ func CreateElasticDocument(i string, p RenderedPage) (doc clients.ElasticDocumen
 		return doc, err
 	}
 	r := bytes.NewReader(bodyJSON)
-	doc = clients.ElasticDocument{
+	doc = connecting.ElasticDocument{
 		Index:      i,
 		DocumentID: idHash,
 		Body:       r,

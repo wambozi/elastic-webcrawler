@@ -11,7 +11,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
 )
 
 var (
@@ -59,9 +59,9 @@ func TestNewServer(t *testing.T) {
 	c := conf.Configuration{Server: conf.ServerConfiguration{Port: 8080, ReadHeaderTimeoutMillis: 3000}}
 	r := httprouter.New()
 	l := logrus.New()
-	ac := clients.CreateAppsearchClient(ase, token, api)
-	cfg := clients.GenerateElasticConfig([]string{ee}, username, password)
-	ec, err := clients.CreateElasticClient(cfg)
+	ac := connecting.CreateAppsearchClient(ase, token, api)
+	cfg := connecting.GenerateElasticConfig([]string{ee}, username, password)
+	ec, err := connecting.CreateElasticClient(cfg)
 	if err != nil {
 		t.Errorf("Unexpected error creating Elasticsearch client: %s", err)
 	}
@@ -78,9 +78,9 @@ func TestNewHttpServer(t *testing.T) {
 	c := conf.Configuration{Server: conf.ServerConfiguration{Port: 8080, ReadHeaderTimeoutMillis: 3000}}
 	r := httprouter.New()
 	l := logrus.New()
-	ac := clients.CreateAppsearchClient(ase, token, api)
-	cfg := clients.GenerateElasticConfig([]string{ee}, username, password)
-	ec, err := clients.CreateElasticClient(cfg)
+	ac := connecting.CreateAppsearchClient(ase, token, api)
+	cfg := connecting.GenerateElasticConfig([]string{ee}, username, password)
+	ec, err := connecting.CreateElasticClient(cfg)
 	if err != nil {
 		t.Errorf("Unexpected error creating Elasticsearch client: %s", err)
 	}
@@ -119,9 +119,9 @@ func TestShutdownOnSignal(t *testing.T) {
 	c := conf.Configuration{Server: conf.ServerConfiguration{Port: 8080, ReadHeaderTimeoutMillis: 3000}}
 	r := httprouter.New()
 	l := logrus.New()
-	ac := clients.CreateAppsearchClient(ase, token, api)
-	cfg := clients.GenerateElasticConfig([]string{ee}, username, password)
-	ec, err := clients.CreateElasticClient(cfg)
+	ac := connecting.CreateAppsearchClient(ase, token, api)
+	cfg := connecting.GenerateElasticConfig([]string{ee}, username, password)
+	ec, err := connecting.CreateElasticClient(cfg)
 	if err != nil {
 		t.Errorf("Unexpected error creating Elasticsearch client: %s", err)
 	}
@@ -162,9 +162,9 @@ func TestBegin(t *testing.T) {
 	c := conf.Configuration{Server: conf.ServerConfiguration{Port: 8080, ReadHeaderTimeoutMillis: 3000}}
 	r := httprouter.New()
 	l := logrus.New()
-	ac := clients.CreateAppsearchClient(ase, token, api)
-	cfg := clients.GenerateElasticConfig([]string{ee}, username, password)
-	ec, err := clients.CreateElasticClient(cfg)
+	ac := connecting.CreateAppsearchClient(ase, token, api)
+	cfg := connecting.GenerateElasticConfig([]string{ee}, username, password)
+	ec, err := connecting.CreateElasticClient(cfg)
 	if err != nil {
 		t.Errorf("Unexpected error creating Elasticsearch client: %s", err)
 	}

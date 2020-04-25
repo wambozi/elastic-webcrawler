@@ -14,19 +14,19 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
 )
 
 //Server defines storage and a router
 type Server struct {
-	AppsearchClient *clients.AppsearchClient
+	AppsearchClient *connecting.AppsearchClient
 	ElasticClient   *elasticsearch.Client
 	Router          *httprouter.Router
 	Log             *logrus.Logger
 }
 
 //NewServer sets up storage, router and routes
-func NewServer(c *conf.Configuration, ac *clients.AppsearchClient, ec *elasticsearch.Client, r *httprouter.Router, log *logrus.Logger) *Server {
+func NewServer(c *conf.Configuration, ac *connecting.AppsearchClient, ec *elasticsearch.Client, r *httprouter.Router, log *logrus.Logger) *Server {
 	server := &Server{AppsearchClient: ac, ElasticClient: ec, Router: r, Log: log}
 	server.routes()
 	return server

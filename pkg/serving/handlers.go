@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/logger"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/crawling"
 )
 
 // Response is a concrete representation of the response to the client calling the crawl
@@ -24,7 +24,7 @@ type errorResponse struct {
 
 func (s *Server) handleCrawl() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var b crawler.CrawlRequest
+		var b crawling.CrawlRequest
 		w.Header().Set("Content-Type", "application/json")
 
 		err := json.NewDecoder(r.Body).Decode(&b)
@@ -68,7 +68,7 @@ func (s *Server) handleCrawl() http.HandlerFunc {
 			return
 		}
 
-		status := crawler.Init(s.ElasticClient, s.AppsearchClient, b, s.Log)
+		status := crawling.Init(s.ElasticClient, s.AppsearchClient, b, s.Log)
 		res := Response{}
 
 		if b.Type == "elasticsearch" {

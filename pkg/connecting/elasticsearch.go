@@ -1,4 +1,4 @@
-package clients
+package connecting
 
 import (
 	"context"

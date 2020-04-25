@@ -9,10 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	elasticsearch "github.com/elastic/go-elasticsearch/v8"
 	"github.com/sirupsen/logrus"
 )
+
+// This is essentially the async portion of elogrus: https://github.com/sohlich/elogrus
+// but rather than use the olivere custom Elasticsearch lib I replaced it with the
+// lib supported by Elasticsearch. Really didn't want to have two libs in the project for
+// connecting to Elastic to prevent confusion. Other than that all of the code here is
+// copy-pasta from the hook.go in that repo.
 
 // IndexNameFunc returns the index name
 type IndexNameFunc func() string

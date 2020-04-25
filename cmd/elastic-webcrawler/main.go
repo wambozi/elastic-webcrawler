@@ -9,7 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/conf"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/logging"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/serving"
 )
@@ -38,13 +38,13 @@ func run(logger *logrus.Logger) error {
 		return err
 	}
 
-	elasticConfig := clients.GenerateElasticConfig([]string{c.Elasticsearch.Endpoint}, c.Elasticsearch.Username, c.Elasticsearch.Password)
-	elasticClient, err := clients.CreateElasticClient(elasticConfig)
+	elasticConfig := connecting.GenerateElasticConfig([]string{c.Elasticsearch.Endpoint}, c.Elasticsearch.Username, c.Elasticsearch.Password)
+	elasticClient, err := connecting.CreateElasticClient(elasticConfig)
 	if err != nil {
 		return err
 	}
 
-	appClient := clients.CreateAppsearchClient(c.Appsearch.Endpoint, c.Appsearch.Token, c.Appsearch.API)
+	appClient := connecting.CreateAppsearchClient(c.Appsearch.Endpoint, c.Appsearch.Token, c.Appsearch.API)
 
 	ipAddr, err := logging.GetIPAddr()
 	if err != nil {

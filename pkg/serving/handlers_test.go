@@ -10,16 +10,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/crawler"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/crawling"
 )
 
 func TestHandleIndex(t *testing.T) {
 	r := httprouter.New()
 	l := logrus.New()
-	ac := clients.CreateAppsearchClient(ase, token, api)
-	cfg := clients.GenerateElasticConfig([]string{ee}, username, password)
-	ec, err := clients.CreateElasticClient(cfg)
+	ac := connecting.CreateAppsearchClient(ase, token, api)
+	cfg := connecting.GenerateElasticConfig([]string{ee}, username, password)
+	ec, err := connecting.CreateElasticClient(cfg)
 	if err != nil {
 		t.Errorf("Unexpected error creating Elasticsearch client: %s", err)
 	}
@@ -44,7 +44,7 @@ func TestHandleIndex(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			tc.server.routes()
-			b := crawler.CrawlRequest{
+			b := crawling.CrawlRequest{
 				Index: "test",
 				URL:   "https://www.example.com",
 				Type:  "elasticsearch",

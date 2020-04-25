@@ -1,4 +1,4 @@
-![Elasticsearch Search API](docs/img/elastic-webcrawler.png)
+![Elasticsearch Search API](docs/img/elastic-webcrawling.png)
 
 [![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=wambozi_elastic-webcrawler&metric=coverage)](https://sonarcloud.io/dashboard?id=wambozi_elastic-webcrawler)
 

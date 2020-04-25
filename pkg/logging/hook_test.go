@@ -13,7 +13,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/clients"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
 )
 
 var (
@@ -64,7 +64,7 @@ func hookTest(hookfunc NewHookFunc, indexName string, t *testing.T) {
 	}
 
 	// Create the elasticsearch client using the config defined above
-	elasticClient, err := clients.CreateElasticClient(elasticConfig)
+	elasticClient, err := connecting.CreateElasticClient(elasticConfig)
 	if err != nil {
 		t.Errorf("Error: %+v", err)
 	}
