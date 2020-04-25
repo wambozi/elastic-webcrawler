@@ -11,7 +11,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/wambozi/elastic-webcrawler/m/pkg/connecting"
-	"github.com/wambozi/elastic-webcrawler/m/pkg/crawling"
+	"github.com/wambozi/elastic-webcrawler/m/pkg/validating"
 )
 
 func TestHandleIndex(t *testing.T) {
@@ -44,10 +44,9 @@ func TestHandleIndex(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			tc.server.routes()
-			b := crawling.CrawlRequest{
+			b := validating.CrawlRequest{
 				Index: "test",
 				URL:   "https://www.example.com",
-				Type:  "elasticsearch",
 			}
 			bodyJSON, err := json.Marshal(b)
 			encodedBody := bytes.NewReader(bodyJSON)

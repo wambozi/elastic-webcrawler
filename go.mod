@@ -16,11 +16,13 @@ require (
 	github.com/gookit/color v1.2.1
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/pkg/errors v0.8.0
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/temoto/robotstxt v1.1.1 // indirect
+	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 // indirect
 )

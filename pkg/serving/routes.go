@@ -92,5 +92,6 @@ func closeChannel(once *sync.Once, channel chan<- error) {
 }
 
 func (s *Server) routes() {
-	s.Router.HandlerFunc("POST", "/crawl", s.execDurLog(s.reqResLog(s.handleCrawl())))
+	s.Router.HandlerFunc("POST", "/elasticsearch/crawl", s.execDurLog(s.reqResLog(s.handleElasticCrawl())))
+	s.Router.HandlerFunc("POST", "/appsearch/crawl", s.execDurLog(s.reqResLog(s.handleAppSearchCrawl())))
 }
