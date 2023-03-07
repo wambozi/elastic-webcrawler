@@ -5,9 +5,7 @@ go 1.13
 require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/antchfx/htmlquery v1.2.1 // indirect
-	github.com/antchfx/xmlquery v1.2.2 // indirect
-	github.com/antchfx/xpath v1.1.4 // indirect
-	github.com/aws/aws-sdk-go v1.27.2 // indirect
+	github.com/antchfx/xmlquery v1.3.1 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20191218082911-5398a82b748f
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gocolly/colly v1.2.0
@@ -21,6 +19,4 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/temoto/robotstxt v1.1.1 // indirect
-	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
-	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 // indirect
 )
