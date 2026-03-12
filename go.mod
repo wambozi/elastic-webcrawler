@@ -20,6 +20,5 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/temoto/robotstxt v1.1.1 // indirect
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
-	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 // indirect
+	golang.org/x/net v0.7.0 // indirect
 )
